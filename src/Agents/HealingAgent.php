@@ -4,6 +4,7 @@ namespace Tackle\Agents;
 
 use Laravel\Ai\Attributes\MaxSteps;
 use Laravel\Ai\Promptable;
+use Tackle\Contracts\CodingAgent;
 use Tackle\Healing\TelescopeReader;
 use Tackle\Support\PathGuard;
 use Tackle\Tools\EditFile;
@@ -14,7 +15,7 @@ use Tackle\Tools\RunTests;
 use Tackle\Tools\SearchCode;
 
 #[MaxSteps(20)]
-class HealingAgent
+class HealingAgent implements CodingAgent
 {
     use Promptable;
 
