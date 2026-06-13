@@ -67,7 +67,6 @@ class HealJobFailure implements ShouldQueue
             $mode        = config('ai-code.healing.mode', 'pr');
 
             if ($testsPassed && $mode === 'patch') {
-                $runner->push($branchName, $worktreePath);
                 $runner->applyToMain($branchName);
                 $this->redispatch();
                 Log::info("Tackle Healer: patch applied and job re-dispatched for {$this->jobClass}.");
