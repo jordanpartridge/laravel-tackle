@@ -25,6 +25,15 @@ class SandboxRunner
     {
         $path = sys_get_temp_dir() . '/tackle-' . md5($branchName . microtime());
 
+        // Ensure there is at least one commit before attempting a worktree.
+        $headCheck = Process::path($this->repoRoot)->timeout(10)->run(['git', 'rev-parse', 'HEAD']);
+        if (!$headCheck->successful()) {
+            throw new RuntimeException(
+                "Cannot create a healing worktree — the repository has no commits yet. " .
+                "Run: git add -A && git commit -m \"initial commit\""
+            );
+        }
+
         $result = Process::path($this->repoRoot)
             ->timeout(60)
             ->run(['git', 'worktree', 'add', '-b', $branchName, $path, 'HEAD']);
