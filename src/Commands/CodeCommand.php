@@ -276,17 +276,28 @@ class CodeCommand extends Command
         }
 
         if ($tool === 'EditFile' || $tool === 'WriteFile') {
-            $this->line('<fg=green>  ✓ File saved</>');
+            if (str_contains($result, 'outside the workspace')
+                || str_contains($result, 'could not be resolved')
+                || str_contains($result, 'protected pattern')
+                || str_contains($result, 'not found')
+                || str_contains($result, 'not unique')) {
+                $this->line('<fg=yellow>  ⚠ ' . $result . '</>');
+            } else {
+                $this->line('<fg=green>  ✓ File saved</>');
+            }
         }
     }
 
     private function showGitDiff(): void
     {
-        if (! is_dir(base_path('.git'))) {
+        $wt   = app(WorktreeManager::class);
+        $root = $wt->active() ? $wt->path() : base_path();
+
+        if (! is_dir($root . '/.git') && ! $wt->active()) {
             return;
         }
 
-        $output = shell_exec('git diff --stat 2>/dev/null');
+        $output = shell_exec('git -C ' . escapeshellarg($root) . ' diff --stat 2>/dev/null');
 
         if ($output && trim($output) !== '') {
             $this->line('');
@@ -399,8 +410,11 @@ class CodeCommand extends Command
 
     private function expandAtMentions(string $task): string
     {
-        return preg_replace_callback('#@([\w./_-]+)#', function ($matches) {
-            $path = base_path($matches[1]);
+        $wt   = app(WorktreeManager::class);
+        $root = $wt->active() ? $wt->path() : base_path();
+
+        return preg_replace_callback('#@([\w./_-]+)#', function ($matches) use ($root) {
+            $path = $root . DIRECTORY_SEPARATOR . $matches[1];
 
             if (! file_exists($path) || is_dir($path)) {
                 return $matches[0];
