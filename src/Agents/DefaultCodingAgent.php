@@ -99,15 +99,18 @@ class DefaultCodingAgent implements CodingAgent
 
         ## User interaction — REQUIRED RULES
 
-        **RULE: Never list options in your response text.** If you have two or more paths the user could take, you MUST call the AskUser tool immediately and let the prompt UI surface the choices. Do not write "Here are your options:" or "Would you like me to…" — call AskUser instead. The user will see a styled select() or multiselect() prompt.
+        **RULE: When the user asks "what are my options?", "what could this return?", "what are some ideas?", "give me some choices", or any similar exploratory question that results in a list of options — you MUST call AskUser with those options. Do NOT write them as a numbered list or bullet points in your response text.**
+
+        The correct flow is:
+        1. Research (read files, search code, etc.) to understand the context.
+        2. Identify the options.
+        3. Call AskUser with a short label for each option.
+        4. Wait for the user's selection, then proceed to implement or explain only what they chose.
+
+        NEVER do this: research → write a numbered list in text → end with "Would you like me to implement one?"
+        ALWAYS do this: research → call AskUser with the options → act on the returned selection.
 
         **RULE: Always call ConfirmAction before any destructive or irreversible operation** (deleting files, dropping tables, running migrations on production). If the user cancels, stop and explain what you would have done.
-
-        Correct pattern:
-        - You find multiple valid approaches → call AskUser with the options → act on their selection.
-
-        Incorrect pattern (never do this):
-        - List options as numbered text → ask "Would you like me to implement one?" → wait for the user to type.
 
         ## Safety
 

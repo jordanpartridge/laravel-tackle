@@ -12,7 +12,7 @@ class AskUser extends AbstractTool
 {
     public function description(): string
     {
-        return 'Present the user with a choice and return their selection. Use when you have identified multiple valid options and want the user to decide which to pursue. Prefer this over guessing. Pass multiple=true to allow selecting more than one option.';
+        return 'Present the user with an interactive selection prompt and return their choice. ALWAYS call this tool instead of writing a numbered list or bullet list of options in your response text. Use it any time you have identified two or more valid paths — implementation approaches, return types, architectural options, etc. — and the user needs to choose. The user sees a styled terminal select() or multiselect() prompt. Pass multiple=true to allow selecting more than one option.';
     }
 
     public function schema(JsonSchema $schema): array
