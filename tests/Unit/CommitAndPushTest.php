@@ -43,12 +43,14 @@ it('stages, commits, and pushes when there are changes', function () {
     Process::assertRan('git push');
 });
 
-it('pushes to HEAD:<branch> when branch is provided without checking it out', function () {
+it('fetches and resets to remote tip before committing when branch is provided', function () {
     Process::fake([
-        'git status --porcelain'   => Process::result(' M app/Foo.php'),
-        'git add -A'               => Process::result(''),
-        'git commit*'              => Process::result('[detached HEAD abc1234] Add comment'),
-        'git push origin*'         => Process::result(''),
+        'git status --porcelain' => Process::result(' M app/Foo.php'),
+        'git fetch origin*'      => Process::result(''),
+        'git reset*'             => Process::result(''),
+        'git add -A'             => Process::result(''),
+        'git commit*'            => Process::result('[detached HEAD abc1234] Add comment'),
+        'git push origin*'       => Process::result(''),
     ]);
 
     $result = makeCommitAndPushTool()->handle(new Request([
@@ -58,6 +60,8 @@ it('pushes to HEAD:<branch> when branch is provided without checking it out', fu
 
     expect($result)->toBe('Changes committed and pushed to the existing PR branch.');
     Process::assertNotRan('git checkout*');
+    Process::assertRan("git fetch origin 'tackle/issue-6-return-dalton'");
+    Process::assertRan('git reset --mixed FETCH_HEAD');
     Process::assertRan("git push origin HEAD:'tackle/issue-6-return-dalton'");
 });
 

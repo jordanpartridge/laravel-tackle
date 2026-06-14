@@ -43,6 +43,20 @@ class CommitAndPush extends AbstractTool
             return 'No changes to commit.';
         }
 
+        if ($branch !== '') {
+            // Sync with the remote tip so our commit is a fast-forward.
+            // git reset --mixed moves detached HEAD to FETCH_HEAD without
+            // touching working-directory files, so our edits survive.
+            $fetch = Process::path($path)->run('git fetch origin ' . escapeshellarg($branch));
+            if ($fetch->successful()) {
+                Process::path($path)->run('git reset --mixed FETCH_HEAD');
+                $afterReset = Process::path($path)->run('git status --porcelain');
+                if (trim($afterReset->output()) === '') {
+                    return 'No changes to commit — the remote branch already contains these changes.';
+                }
+            }
+        }
+
         Process::path($path)->run('git add -A');
 
         $commit = Process::path($path)->run('git commit -m ' . escapeshellarg($message));
