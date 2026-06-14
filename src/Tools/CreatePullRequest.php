@@ -42,13 +42,13 @@ class CreatePullRequest extends AbstractTool
             return 'GitHub is not configured. Set GITHUB_TOKEN (or run: gh auth login) and GITHUB_REPO in .env.';
         }
 
-        $title       = $request->string('title', '');
-        $body        = $request->string('body', '');
-        $branch      = $request->string('branch', '');
-        $base        = $request->string('base', 'main');
+        $title       = (string) $request->string('title', '');
+        $body        = (string) $request->string('body', '');
+        $branch      = (string) $request->string('branch', '');
+        $base        = (string) $request->string('base', 'main');
         $issueNumber = $request->integer('issue_number', 0);
 
-        if (! $title || ! $branch) {
+        if (trim($title) === '' || trim($branch) === '') {
             return 'title and branch are required.';
         }
 
