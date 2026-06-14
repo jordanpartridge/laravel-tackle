@@ -47,6 +47,8 @@ class TackleSuggestPrompt extends SuggestPrompt
                 => $this->highlightNext(count($this->matches()), true),
             Key::TAB
                 => $this->acceptHighlighted(),
+            Key::ESCAPE
+                => $this->clearInput(),
             Key::oneOf([Key::HOME, Key::CTRL_A], $key)
                 => $this->highlighted !== null ? $this->highlight(0) : null,
             Key::oneOf([Key::END, Key::CTRL_E], $key)
@@ -66,6 +68,15 @@ class TackleSuggestPrompt extends SuggestPrompt
             $default,
             ignore: fn ($key) => Key::oneOf([Key::HOME, Key::END, Key::CTRL_A, Key::CTRL_E], $key) && $this->highlighted !== null,
         );
+    }
+
+    protected function clearInput(): void
+    {
+        $this->typedValue     = '';
+        $this->cursorPosition = 0;
+        $this->highlighted    = null;
+        $this->matches        = null;
+        $this->firstVisible   = 0;
     }
 
     // Fill in the highlighted suggestion and clear the dropdown — does NOT submit.
