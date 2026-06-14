@@ -7,8 +7,13 @@ use Illuminate\Support\Facades\Process;
 use Laravel\Ai\Tools\Request;
 use Tackle\Support\PathGuard;
 
+use function Laravel\Prompts\confirm;
+
 class CommitAndPush extends AbstractTool
 {
+    /** Override in tests: set to true/false to skip the interactive prompt. */
+    public static ?bool $confirmOverride = null;
+
     public function __construct(private PathGuard $pathGuard) {}
 
     public function description(): string
@@ -57,6 +62,10 @@ class CommitAndPush extends AbstractTool
             }
         }
 
+        if (! $this->previewAndConfirm($path, $branch)) {
+            return 'Cancelled by user.';
+        }
+
         Process::path($path)->run('git add -A');
 
         $commit = Process::path($path)->run('git commit -m ' . escapeshellarg($message));
@@ -76,5 +85,35 @@ class CommitAndPush extends AbstractTool
         }
 
         return 'Changes committed and pushed to the existing PR branch.';
+    }
+
+    private function previewAndConfirm(string $path, string $branch): bool
+    {
+        $stat = trim(Process::path($path)->run('git diff HEAD --stat')->output());
+        $diff = trim(Process::path($path)->run('git diff HEAD')->output());
+
+        echo PHP_EOL;
+
+        if ($stat !== '') {
+            echo $stat . PHP_EOL;
+        }
+
+        if ($diff !== '') {
+            $lines = explode("\n", $diff);
+            if (count($lines) > 50) {
+                echo PHP_EOL . implode("\n", array_slice($lines, 0, 50));
+                echo PHP_EOL . '... (' . (count($lines) - 50) . ' more lines not shown)' . PHP_EOL;
+            } else {
+                echo PHP_EOL . $diff . PHP_EOL;
+            }
+        }
+
+        if (static::$confirmOverride !== null) {
+            return static::$confirmOverride;
+        }
+
+        $label = $branch !== '' ? "Push these changes to {$branch}?" : 'Push these changes?';
+
+        return confirm($label, default: false);
     }
 }

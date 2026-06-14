@@ -288,8 +288,10 @@ class CodeCommand extends Command
         if ($tool === 'CommitAndPush') {
             if ($result === 'Changes committed and pushed to the existing PR branch.') {
                 $this->line('<fg=green>  ✓ Committed and pushed.</>');
-            } elseif ($result === 'No changes to commit.') {
+            } elseif ($result === 'No changes to commit.' || str_starts_with($result, 'No changes to commit —')) {
                 $this->line('<fg=yellow>  ⚠ No changes to commit.</>');
+            } elseif ($result === 'Cancelled by user.') {
+                $this->line('<fg=yellow>  ⚠ Push cancelled.</>');
             } else {
                 $this->line('<fg=red>  ✗ ' . $result . '</>');
             }

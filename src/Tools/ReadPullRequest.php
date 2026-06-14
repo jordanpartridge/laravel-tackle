@@ -13,15 +13,16 @@ class ReadPullRequest extends AbstractTool
 
     public function description(): string
     {
-        return 'Fetch a GitHub pull request by number — returns the title, body, branch name (head ref), base branch, state, author, and comments. Use this (not ReadGitHubIssue) when the user references a PR number, especially when you need the branch name to pass to CommitAndPush.';
+        return 'Fetch a GitHub pull request by number — returns the title, body, branch name (head ref), base branch, state, author, and comments. Omit pr_number to list recent open pull requests. Use this (not ReadGitHubIssue) when the user references a PR number, especially when the branch name is needed for CommitAndPush.';
     }
 
     public function schema(JsonSchema $schema): array
     {
         return [
             'pr_number' => $schema->integer()
-                ->description('GitHub pull request number.')
-                ->required(),
+                ->description('GitHub pull request number. Omit to list recent open pull requests.'),
+            'limit' => $schema->integer()
+                ->description('Number of open PRs to return when no pr_number is given. Defaults to 10.'),
         ];
     }
 
@@ -33,10 +34,15 @@ class ReadPullRequest extends AbstractTool
 
         $prNumber = $request->integer('pr_number', 0);
 
-        if ($prNumber <= 0) {
-            return 'pr_number is required.';
+        if ($prNumber > 0) {
+            return $this->fetchOne($prNumber);
         }
 
+        return $this->listOpen(max(1, min(25, (int) $request->integer('limit', 10))));
+    }
+
+    private function fetchOne(int $prNumber): string
+    {
         $repo = $this->client->repo();
 
         try {
@@ -52,6 +58,42 @@ class ReadPullRequest extends AbstractTool
             return $this->format($prResponse->json(), $comments);
         } catch (Throwable $e) {
             return 'Error fetching pull request: ' . $e->getMessage();
+        }
+    }
+
+    private function listOpen(int $limit): string
+    {
+        $repo = $this->client->repo();
+
+        try {
+            $response = $this->client->get("repos/{$repo}/pulls", [
+                'state'     => 'open',
+                'per_page'  => $limit,
+                'sort'      => 'updated',
+                'direction' => 'desc',
+            ]);
+
+            if (! $response->successful()) {
+                return 'Could not list pull requests. Check that GITHUB_TOKEN and GITHUB_REPO are set.';
+            }
+
+            $prs = $response->json();
+
+            if (empty($prs)) {
+                return 'No open pull requests found.';
+            }
+
+            return collect($prs)->map(function (array $pr): string {
+                $number  = $pr['number']        ?? '?';
+                $title   = $pr['title']         ?? '?';
+                $branch  = $pr['head']['ref']   ?? '?';
+                $base    = $pr['base']['ref']   ?? '?';
+                $author  = $pr['user']['login'] ?? '?';
+                $updated = $pr['updated_at']    ?? '';
+                return "[{$updated}] #{$number} [{$branch} → {$base}] {$title} (by {$author})";
+            })->implode("\n");
+        } catch (Throwable $e) {
+            return 'Error listing pull requests: ' . $e->getMessage();
         }
     }
 

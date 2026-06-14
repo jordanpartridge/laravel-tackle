@@ -21,13 +21,18 @@ it('returns not-configured message when credentials are missing', function () {
     expect($result)->toContain('GitHub is not configured');
 });
 
-it('returns error when pr_number is missing', function () {
+it('lists open PRs when pr_number is omitted', function () {
     config()->set('tackle.github.token', 'ghp_token');
     config()->set('tackle.github.repo', 'acme/app');
 
+    Http::fake([
+        '*api.github.com*/pulls*' => Http::response([], 200),
+    ]);
+
     $result = makePrReadTool()->handle(new Request([]));
 
-    expect($result)->toContain('pr_number is required');
+    // No error — falls through to the list path
+    expect($result)->not->toContain('pr_number is required');
 });
 
 it('returns pr details including branch name', function () {
@@ -81,6 +86,53 @@ it('includes comments in the output', function () {
     $result = makePrReadTool()->handle(new Request(['pr_number' => 6]));
 
     expect($result)->toContain('reviewer')->toContain('LGTM');
+});
+
+it('lists open pull requests when no pr_number is given', function () {
+    config()->set('tackle.github.token', 'ghp_token');
+    config()->set('tackle.github.repo', 'acme/app');
+
+    Http::fake([
+        '*api.github.com*/pulls*' => Http::response([
+            [
+                'number'     => 6,
+                'title'      => 'Return jordandalton from controller',
+                'user'       => ['login' => 'JordanDalton'],
+                'head'       => ['ref' => 'tackle/issue-6-return-jordandalton'],
+                'base'       => ['ref' => 'main'],
+                'updated_at' => '2026-06-14T10:00:00Z',
+            ],
+            [
+                'number'     => 5,
+                'title'      => 'Add slug field',
+                'user'       => ['login' => 'JordanDalton'],
+                'head'       => ['ref' => 'tackle/issue-5-slug'],
+                'base'       => ['ref' => 'main'],
+                'updated_at' => '2026-06-13T08:00:00Z',
+            ],
+        ], 200),
+    ]);
+
+    $result = makePrReadTool()->handle(new Request([]));
+
+    expect($result)
+        ->toContain('#6')
+        ->toContain('tackle/issue-6-return-jordandalton → main')
+        ->toContain('#5')
+        ->toContain('tackle/issue-5-slug → main');
+});
+
+it('returns no-PRs message when list is empty', function () {
+    config()->set('tackle.github.token', 'ghp_token');
+    config()->set('tackle.github.repo', 'acme/app');
+
+    Http::fake([
+        '*api.github.com*/pulls*' => Http::response([], 200),
+    ]);
+
+    $result = makePrReadTool()->handle(new Request([]));
+
+    expect($result)->toBe('No open pull requests found.');
 });
 
 it('returns error when GitHub API returns non-200', function () {
