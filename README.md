@@ -450,24 +450,25 @@ No extra configuration is needed beyond `AI_CODE_HEALING_ENABLED=true`.
 ### Per-class opt-out
 
 Some jobs should never be auto-patched — payment processors, email senders,
-anything where an untested change would be worse than the failure. Add a
-`$healable` property to opt out:
+anything where an untested change would be worse than the failure. Use the
+`#[Healable(false)]` attribute to opt out:
 
 ```php
+use Tackle\Attributes\Healable;
+
+#[Healable(false)]
 class ChargeSubscription implements ShouldQueue
 {
-    // Tackle will skip this job entirely — even in AI_CODE_HEALING_ENABLED=true.
-    public bool $healable = false;
-
     public function handle(): void
     {
-        // ...
+        // Tackle will skip this job entirely — even when AI_CODE_HEALING_ENABLED=true.
     }
 }
 ```
 
-The listener checks this property via reflection before dispatching a heal job.
-Jobs without the property, or with `$healable = true`, are healed normally.
+The listener checks for the attribute via reflection before dispatching a heal
+job. Jobs without the attribute, or with `#[Healable(true)]`, are healed
+normally.
 
 ### Audit log
 
@@ -777,6 +778,11 @@ AI_CODE_MODEL=gpt-4o
 The provider name must match a key in `config/ai.php`. Any provider supported by
 `laravel/ai` (Anthropic, OpenAI, Gemini, Groq, Ollama, etc.) works as long as it
 supports tool calling.
+
+Internally, Tackle injects provider and model values via two custom Laravel
+contextual attributes — `#[AiProvider]` and `#[AiModel]` — so any agent you
+write by extending `DefaultCodingAgent` inherits these config values
+automatically through the container.
 
 ---
 

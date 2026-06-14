@@ -4,6 +4,7 @@ namespace Tackle\Healing;
 
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\Facades\DB;
+use Tackle\Attributes\Healable;
 use Tackle\Jobs\HealJobFailure;
 use Throwable;
 
@@ -31,11 +32,11 @@ class JobFailureListener
             return;
         }
 
-        // Per-class opt-out: respect $healable = false on the job class.
+        // Per-class opt-out: respect #[Healable(false)] on the job class.
         if (class_exists($jobClass)) {
-            $defaults = (new \ReflectionClass($jobClass))->getDefaultProperties();
-            if (($defaults['healable'] ?? true) === false) {
-                logger()->info("Tackle Healer: skipping {$jobClass} — \$healable is false.");
+            $attrs = (new \ReflectionClass($jobClass))->getAttributes(Healable::class);
+            if ($attrs && $attrs[0]->newInstance()->enabled === false) {
+                logger()->info("Tackle Healer: skipping {$jobClass} — #[Healable(false)] is set.");
                 return;
             }
         }

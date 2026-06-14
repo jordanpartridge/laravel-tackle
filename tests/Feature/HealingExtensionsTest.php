@@ -3,6 +3,7 @@
 use Illuminate\Console\Events\ScheduledTaskFailed;
 use Illuminate\Console\Scheduling\Event as SchedulingEvent;
 use Illuminate\Support\Facades\Queue;
+use Tackle\Attributes\Healable;
 use Tackle\Healing\JobFailureListener;
 use Tackle\Healing\ScheduledTaskFailureListener;
 use Tackle\Jobs\HealJobFailure;
@@ -74,16 +75,13 @@ it('uses command as description when task has no description', function () {
 });
 
 // ---------------------------------------------------------------------------
-// Per-class opt-out ($healable = false)
+// Per-class opt-out (#[Healable(false)])
 // ---------------------------------------------------------------------------
 
-it('skips healing when job class declares $healable = false', function () {
+it('skips healing when job class declares #[Healable(false)]', function () {
     Queue::fake();
 
-    // Synthesise a job class with $healable = false
-    $jobClass = new class {
-        public bool $healable = false;
-    };
+    $jobClass      = new #[Healable(false)] class {};
     $concreteClass = get_class($jobClass);
 
     $payload = json_encode([
@@ -95,22 +93,21 @@ it('skips healing when job class declares $healable = false', function () {
     $job = Mockery::mock(\Illuminate\Contracts\Queue\Job::class);
     $job->allows('getRawBody')->andReturn($payload);
 
-    $event    = new \Illuminate\Queue\Events\JobFailed('database', $job, new RuntimeException('oops'));
-    $listener = new JobFailureListener();
-    $listener->handle($event);
+    $event = new \Illuminate\Queue\Events\JobFailed('database', $job, new RuntimeException('oops'));
+    (new JobFailureListener())->handle($event);
 
     Queue::assertNothingPushed();
 });
 
-it('heals a job class that has no $healable property', function () {
+it('heals a job class that has no #[Healable] attribute', function () {
     Queue::fake();
 
-    $jobClass = new class {};
+    $jobClass      = new class {};
     $concreteClass = get_class($jobClass);
 
     $payload = json_encode([
         'displayName' => $concreteClass,
-        'uuid'        => 'no-property-uuid',
+        'uuid'        => 'no-attribute-uuid',
         'data'        => ['command' => ''],
     ]);
 
@@ -118,18 +115,15 @@ it('heals a job class that has no $healable property', function () {
     $job->allows('getRawBody')->andReturn($payload);
 
     $event = new \Illuminate\Queue\Events\JobFailed('database', $job, new RuntimeException('boom'));
-
     (new JobFailureListener())->handle($event);
 
     Queue::assertPushed(HealJobFailure::class);
 });
 
-it('heals a job class that has $healable = true', function () {
+it('heals a job class that has #[Healable(true)]', function () {
     Queue::fake();
 
-    $jobClass = new class {
-        public bool $healable = true;
-    };
+    $jobClass      = new #[Healable(true)] class {};
     $concreteClass = get_class($jobClass);
 
     $payload = json_encode([
@@ -142,7 +136,6 @@ it('heals a job class that has $healable = true', function () {
     $job->allows('getRawBody')->andReturn($payload);
 
     $event = new \Illuminate\Queue\Events\JobFailed('database', $job, new RuntimeException('err'));
-
     (new JobFailureListener())->handle($event);
 
     Queue::assertPushed(HealJobFailure::class);
