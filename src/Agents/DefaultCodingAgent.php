@@ -12,6 +12,8 @@ use Tackle\Attributes\AiProvider;
 use Tackle\Attributes\Workspace;
 use Tackle\Contracts\CodingAgent;
 use Tackle\Support\PathGuard;
+use Tackle\Tools\AskUser;
+use Tackle\Tools\ConfirmAction;
 use Tackle\Tools\EditFile;
 use Tackle\Tools\GitDiff;
 use Tackle\Tools\Glob;
@@ -54,6 +56,8 @@ class DefaultCodingAgent implements CodingAgent
         private readonly GitDiff $gitDiff,
         private readonly ListRoutes $listRoutes,
         private readonly ReadTelescopeEntry $readTelescopeEntry,
+        private readonly AskUser $askUser,
+        private readonly ConfirmAction $confirmAction,
     ) {}
 
     protected function provider(): string
@@ -135,6 +139,8 @@ class DefaultCodingAgent implements CodingAgent
             $this->gitDiff,
             $this->listRoutes,
             $this->readTelescopeEntry,
+            $this->askUser,
+            $this->confirmAction,
         ];
     }
 }

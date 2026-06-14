@@ -8,10 +8,18 @@ use Laravel\Ai\Streaming\Events\StreamEnd;
 use Laravel\Ai\Streaming\Events\TextDelta;
 use Laravel\Ai\Streaming\Events\ToolCall;
 use Laravel\Ai\Streaming\Events\ToolResult;
+use Laravel\Prompts\Stream;
 use Tackle\Contracts\CodingAgent;
 use Tackle\Support\BudgetTracker;
 
-use function Laravel\Prompts\text;
+use function Laravel\Prompts\error as promptError;
+use function Laravel\Prompts\intro;
+use function Laravel\Prompts\note;
+use function Laravel\Prompts\outro;
+use function Laravel\Prompts\stream;
+use function Laravel\Prompts\suggest;
+use function Laravel\Prompts\title;
+use function Laravel\Prompts\warning;
 
 class CodeCommand extends Command
 {
@@ -24,6 +32,9 @@ class CodeCommand extends Command
         {--yolo : Shorthand for --shell=yolo}';
 
     protected $description = 'Start an interactive AI coding session powered by Laravel Tackle.';
+
+    private ?Stream $activeStream = null;
+    private array   $history      = [];
 
     public function handle(CodingAgent $agent, BudgetTracker $budget): int
     {
@@ -53,24 +64,34 @@ class CodeCommand extends Command
             config(['ai-code.shell' => $shell]);
         }
 
-        $this->renderBanner();
+        $model      = config('ai-code.model', 'claude-sonnet-4-6');
+        $budgetUsd  = config('ai-code.budget_usd', 1.00);
+        $shellMode  = config('ai-code.shell', 'approve');
+
+        title('Tackle — Ready');
+        intro("Laravel Tackle  ·  {$model}  ·  \${$budgetUsd} budget  ·  shell: {$shellMode}");
 
         while (true) {
-            $task = text(
+            $task = suggest(
                 label: 'What should I work on?',
-                placeholder: 'Describe a task, or type "exit" to quit.',
+                options: array_reverse($this->history),
+                placeholder: 'Describe a task or type "exit" to quit.',
                 required: true,
+                hint: count($this->history) > 0 ? 'Use ↑↓ to browse history.' : '',
+                scroll: 8,
             );
 
             if (in_array(strtolower(trim($task)), ['exit', 'quit', 'q'], strict: true)) {
-                $this->line('');
-                $this->line($budget->summary());
-                $this->line('Goodbye!');
+                title('');
+                outro($budget->summary() . ' · Goodbye!');
                 return self::SUCCESS;
             }
 
+            $this->history[] = $task;
+
             if ($budget->overBudget()) {
-                $this->error(sprintf(
+                title('Tackle — Budget Exceeded');
+                promptError(sprintf(
                     'Session aborted: estimated cost ($%.4f) exceeds the budget limit ($%.2f).',
                     $budget->estimatedCost(),
                     $budget->budgetUsd(),
@@ -78,22 +99,22 @@ class CodeCommand extends Command
                 return self::FAILURE;
             }
 
-            $this->line('');
-            $this->line('<fg=yellow>● Agent is working...</>');
+            title('Tackle — Thinking…');
             $this->line('');
 
             try {
                 $this->runAgentTurn($agent, $budget, $task);
             } catch (\Throwable $e) {
-                $this->error('Agent error: ' . $e->getMessage());
-                $this->line('The session is still active. You can continue with a new task.');
+                $this->closeStream();
+                promptError('Agent error: ' . $e->getMessage());
+                note('The session is still active — continue with a new task.');
             }
 
             $this->showGitDiff();
 
+            title('Tackle — Ready');
             $this->line('');
-            $this->line('<fg=gray>Tip: run `git diff` to review changes, `git checkout -- .` to discard them.</>');
-            $this->line('');
+            $this->line('<fg=gray>─────────────────────────────────────────────────────────</>');
         }
     }
 
@@ -103,11 +124,16 @@ class CodeCommand extends Command
 
         $response->each(function ($event) use ($budget) {
             if ($event instanceof TextDelta) {
-                $this->output->write($event->delta);
+                if ($this->activeStream === null) {
+                    $this->line('');
+                    $this->activeStream = stream();
+                }
+                $this->activeStream->append($event->delta);
                 return;
             }
 
             if ($event instanceof ToolCall) {
+                $this->closeStream();
                 $this->renderToolCall($event);
                 return;
             }
@@ -118,12 +144,19 @@ class CodeCommand extends Command
             }
 
             if ($event instanceof StreamEnd) {
+                $this->closeStream();
                 $budget->record($event->usage->promptTokens, $event->usage->completionTokens);
 
                 if ($budget->overBudget()) {
-                    $this->newLine();
-                    $this->error(sprintf(
+                    promptError(sprintf(
                         'Budget limit reached ($%.4f / $%.2f). Stopping.',
+                        $budget->estimatedCost(),
+                        $budget->budgetUsd(),
+                    ));
+                } elseif ($budget->estimatedCost() / $budget->budgetUsd() >= 0.8) {
+                    warning(sprintf(
+                        'Budget at %.0f%% ($%.4f / $%.2f) — consider wrapping up soon.',
+                        ($budget->estimatedCost() / $budget->budgetUsd()) * 100,
                         $budget->estimatedCost(),
                         $budget->budgetUsd(),
                     ));
@@ -131,7 +164,15 @@ class CodeCommand extends Command
             }
         });
 
-        $this->newLine();
+        $this->closeStream();
+    }
+
+    private function closeStream(): void
+    {
+        if ($this->activeStream !== null) {
+            $this->activeStream->close();
+            $this->activeStream = null;
+        }
     }
 
     private function renderToolCall(ToolCall $event): void
@@ -139,21 +180,31 @@ class CodeCommand extends Command
         $tool = $event->toolCall->name;
         $args = $event->toolCall->arguments;
 
+        // These tools render their own interactive UI — suppress the label.
+        if (in_array($tool, ['AskUser', 'ConfirmAction'], strict: true)) {
+            return;
+        }
+
         $summary = match ($tool) {
-            'ReadFile'   => "reading " . ($args['path'] ?? '?'),
-            'Glob'       => "listing " . ($args['pattern'] ?? '?'),
-            'SearchCode' => "searching for " . ($args['query'] ?? '?'),
-            'EditFile'   => "editing " . ($args['path'] ?? '?'),
-            'WriteFile'  => "creating " . ($args['path'] ?? '?'),
-            'RunArtisan' => "artisan " . ($args['command'] ?? '?'),
-            'RunTests'   => "running tests",
-            'RunPint'    => "running pint",
-            'RunShell'   => "shell: " . ($args['command'] ?? '?'),
-            default      => $tool,
+            'ReadFile'           => '📖 reading ' . ($args['path'] ?? '?'),
+            'Glob'               => '🔍 listing ' . ($args['pattern'] ?? '?'),
+            'SearchCode'         => '🔍 searching for ' . ($args['query'] ?? '?'),
+            'EditFile'           => '✏️  editing ' . ($args['path'] ?? '?'),
+            'WriteFile'          => '📝 creating ' . ($args['path'] ?? '?'),
+            'RunArtisan'         => '⚡ artisan ' . ($args['command'] ?? '?'),
+            'RunTests'           => '🧪 running tests' . (! empty($args['filter']) ? ' (filter: ' . $args['filter'] . ')' : ''),
+            'RunPint'            => '✨ formatting with pint',
+            'RunShell'           => '💻 shell: ' . ($args['command'] ?? '?'),
+            'QueryDatabase'      => '🗄️  querying database',
+            'ReadLog'            => '📋 reading log' . (! empty($args['filter']) ? ' (filter: ' . $args['filter'] . ')' : ''),
+            'GitDiff'            => '🔀 git diff' . (! empty($args['path']) ? ' ' . $args['path'] : ''),
+            'ListRoutes'         => '🗺️  listing routes',
+            'ReadTelescopeEntry' => '🔭 reading telescope',
+            default              => '→ ' . $tool,
         };
 
-        $this->newLine();
-        $this->line("<fg=cyan>→ {$summary}</>");
+        title('Tackle — ' . strip_tags($summary));
+        $this->line("<fg=cyan>  {$summary}</>");
     }
 
     private function renderToolResult(ToolResult $event): void
@@ -164,7 +215,13 @@ class CodeCommand extends Command
         if (in_array($tool, ['RunTests', 'RunArtisan', 'RunShell'], strict: true)) {
             if (str_contains($result, 'FAILED') || str_contains($result, 'Error')) {
                 $this->line('<fg=red>  ✗ Command reported failures — agent will handle them.</>');
+            } else {
+                $this->line('<fg=green>  ✓ Done</>');
             }
+        }
+
+        if ($tool === 'EditFile' || $tool === 'WriteFile') {
+            $this->line('<fg=green>  ✓ File saved</>');
         }
     }
 
@@ -178,26 +235,12 @@ class CodeCommand extends Command
 
         if ($output && trim($output) !== '') {
             $this->line('');
-            $this->line('<fg=green>Git diff stat:</>');
-            $this->line(trim($output));
+            note(trim($output));
         }
     }
 
     private function isTty(): bool
     {
         return function_exists('posix_isatty') && posix_isatty(STDIN);
-    }
-
-    private function renderBanner(): void
-    {
-        $model  = config('ai-code.model', 'claude-sonnet-4-6');
-        $budget = config('ai-code.budget_usd', 1.00);
-        $shell  = config('ai-code.shell', 'approve');
-
-        $this->line('');
-        $this->line('<fg=green;options=bold>Laravel Tackle — AI Coding Assistant</>');
-        $this->line("<fg=gray>Model: {$model} | Budget: \${$budget} | Shell: {$shell}</>");
-        $this->line('<fg=gray>Type "exit" to quit. All edits are unstaged — use git to review or discard them.</>');
-        $this->line('');
     }
 }

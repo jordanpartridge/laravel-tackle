@@ -78,6 +78,8 @@ The coding agent has access to these tools:
 - `ListRoutes` — formatted route table with method, URI, name, action
 - `GitDiff` — git diff with support for `staged`, `commit`, `against`, `path`, and `stat` options
 - `ReadTelescopeEntry` — Telescope exception entries by job UUID or recent list; no-ops if Telescope is not installed
+- `AskUser` — present the user with a `select()` or `multiselect()` prompt and return their choice
+- `ConfirmAction` — ask the user to `confirm()` before a destructive operation; returns `"confirmed"` or `"cancelled"`
 
 ### Customization
 

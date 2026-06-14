@@ -176,24 +176,51 @@ php artisan ai:code --yolo         # shorthand
 
 The flag is session-scoped and does not persist to config.
 
+### Interactive UX
+
+`ai:code` uses [Laravel Prompts](https://laravel.com/docs/13.x/prompts) throughout for a fully interactive terminal experience:
+
+- **`suggest()`** — the task prompt shows your previous tasks as autocomplete suggestions. Use ↑↓ to browse history.
+- **`stream()`** — AI text responses stream to the terminal in real time, token by token.
+- **`title()`** — the terminal tab title updates dynamically as the agent works: "Tackle — Thinking…", "Tackle — Reading files", "Tackle — Running tests", "Tackle — Ready".
+- **`select()` / `multiselect()`** — when the agent calls `AskUser`, you're presented with a styled selection list rather than a raw text prompt.
+- **`confirm()`** — when the agent calls `ConfirmAction` before a destructive operation, you see a styled yes/no prompt.
+- **`note()`** — after each turn a `git diff --stat` is shown as a note block so you can see what changed.
+- **`warning()`** — a styled warning appears when you approach 80% of your session budget.
+- **`error()`** — styled errors on agent failures or budget overruns.
+- **`intro()` / `outro()`** — session start and end use styled banners showing the model, budget, and shell mode.
+
 ### Example session
 
 ```
-┌ What should I work on? ──────────────────────────────────────┐
-│ Add a slug field to the Post model                           │
-└──────────────────────────────────────────────────────────────┘
+ ┌──────────────────────────────────────────────────────────────┐
+ │  Laravel Tackle  ·  claude-sonnet-4-6  ·  $1.00  ·  approve │
+ └──────────────────────────────────────────────────────────────┘
 
-→ searching for Post model
-→ reading app/Models/Post.php
-→ creating database/migrations/2024_01_01_add_slug_to_posts.php
-→ editing app/Models/Post.php
-→ running tests
+ ┌ What should I work on? ─────────────────────────────────────┐
+ │ Add a slug field to the Post model                          │
+ └─────────────────────────────────────────────────────────────┘
 
-All done. Migration created, $fillable updated, and tests pass.
+  🔍 searching for Post model
+  📖 reading app/Models/Post.php
+  📝 creating database/migrations/2024_01_01_add_slug_to_posts.php
+  ✓ File saved
+  ✏️  editing app/Models/Post.php
+  ✓ File saved
+  🧪 running tests
+  ✓ Done
 
-┌ What should I work on? ──────────────────────────────────────┐
-│ Make the slug auto-generate from the title on creation       │
-└──────────────────────────────────────────────────────────────┘
+ Migration created, `$fillable` updated, and all tests pass.
+
+ ╭─────────────────────────────────────────────────────────────╮
+ │  app/Models/Post.php | 2 +-                                 │
+ │  1 migration file    | 15 +++++++++++++++                   │
+ ╰─────────────────────────────────────────────────────────────╯
+
+ ┌ What should I work on? ─────────────────────────────────────┐
+ │ Make the slug auto-generate from the title on creation  ▲   │
+ │ Add a slug field to the Post model                      ▼   │
+ └─────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -361,6 +388,8 @@ These tools are available to the agent in every session.
 | `ListRoutes` | Returns a formatted table of all registered routes with method, URI, name, and action. |
 | `GitDiff` | Shows a git diff — supports staged, a specific commit, a branch range, or a path. |
 | `ReadTelescopeEntry` | Reads Telescope exception entries. Pass a job UUID for a specific lookup, or omit to return recent exceptions. No-ops gracefully if Telescope is not installed. |
+| `AskUser` | Presents the user with a `select()` or `multiselect()` prompt and returns their choice. The agent calls this when there are multiple valid paths and it wants the user to decide. |
+| `ConfirmAction` | Presents the user with a `confirm()` prompt before a destructive or irreversible operation. Returns `"confirmed"` or `"cancelled"`. |
 
 All file reads happen in-process. Everything that executes code runs as a
 subprocess, so a broken generated file cannot crash the agent session.

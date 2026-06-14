@@ -54,6 +54,8 @@ ANTHROPIC_API_KEY=sk-ant-...
 | `ListRoutes` | Registered routes — method, URI, name, action |
 | `GitDiff` | Git diff — supports staged, commit, against, path, stat |
 | `ReadTelescopeEntry` | Telescope exception entries — by job UUID or recent list |
+| `AskUser` | Present the user with a `select()` or `multiselect()` to choose between options |
+| `ConfirmAction` | Ask the user to `confirm()` before a destructive or irreversible operation |
 
 ---
 
