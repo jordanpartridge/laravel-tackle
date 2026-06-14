@@ -26,6 +26,7 @@ use Tackle\Tools\CommitAndPush;
 use Tackle\Tools\CreateGitHubIssue;
 use Tackle\Tools\CreatePullRequest;
 use Tackle\Tools\ReadGitHubIssue;
+use Tackle\Tools\ReadPullRequest;
 use Tackle\Tools\ReadSentryIssue;
 use Tackle\Tools\ReadTelescopeEntry;
 use Tackle\Tools\RunArtisan;
@@ -64,6 +65,7 @@ class DefaultCodingAgent implements CodingAgent
         private readonly ReadTelescopeEntry $readTelescopeEntry,
         private readonly ReadSentryIssue $readSentryIssue,
         private readonly ReadGitHubIssue $readGitHubIssue,
+        private readonly ReadPullRequest $readPullRequest,
         private readonly CreateGitHubIssue $createGitHubIssue,
         private readonly CreatePullRequest $createPullRequest,
         private readonly CommitAndPush $commitAndPush,
@@ -114,7 +116,8 @@ class DefaultCodingAgent implements CodingAgent
         - Use RunArtisan for framework operations (make:model, migrate, etc.). Allowed for this environment: {$allowlistStr}. Destructive (terminal confirmation required): {$destructiveStr}. Do NOT attempt RunArtisan with commands outside both lists — they will be refused. For blocked operations, tell the user to run the command themselves in their terminal.
         - Use RunTests after any code change.
         - Use RunShell only when no other tool suffices.
-        - Use CommitAndPush to stage, commit, and push additional changes to an existing PR branch after CreatePullRequest has already opened the PR. Always pass the `branch` parameter — the same branch name that was passed to CreatePullRequest (or the branch you read from ReadGitHubIssue). Without it the push will fail in detached HEAD. Do NOT use RunShell for git add/commit/push — it may be blocked in this environment.
+        - Use ReadPullRequest (not ReadGitHubIssue) when the user references a PR number. ReadPullRequest returns the branch name (head ref) which you MUST pass to CommitAndPush as the `branch` parameter.
+        - Use CommitAndPush to stage, commit, and push additional changes to an existing PR branch. Always pass the `branch` parameter — the branch name returned by ReadPullRequest or the one you passed to CreatePullRequest. Without it the push will fail in detached HEAD. Do NOT use RunShell for git add/commit/push — it may be blocked in this environment.
 
         ## User interaction — REQUIRED RULES
 
@@ -177,6 +180,7 @@ class DefaultCodingAgent implements CodingAgent
             $this->readTelescopeEntry,
             $this->readSentryIssue,
             $this->readGitHubIssue,
+            $this->readPullRequest,
             $this->createGitHubIssue,
             $this->createPullRequest,
             $this->commitAndPush,

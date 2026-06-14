@@ -255,6 +255,7 @@ class CodeCommand extends Command
             'ReadTelescopeEntry' => '🔭 reading telescope',
             'ReadSentryIssue'    => '🪲 reading sentry',
             'ReadGitHubIssue'    => '🐙 reading github issue',
+            'ReadPullRequest'    => '🐙 reading pull request',
             'CreateGitHubIssue'  => '🐙 creating github issue',
             'CreatePullRequest'  => '🚀 opening pull request',
             'CommitAndPush'      => '📤 committing and pushing',
