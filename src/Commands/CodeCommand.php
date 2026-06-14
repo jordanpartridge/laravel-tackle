@@ -276,6 +276,8 @@ class CodeCommand extends Command
                 $this->line('<fg=yellow>  ⚠ Refused — shell is disabled in this environment.</>');
             } elseif (str_starts_with($result, "Command '") && str_contains($result, 'not in the allowlist')) {
                 $this->line('<fg=yellow>  ⚠ Refused — command not in allowlist.</>');
+            } elseif (str_starts_with($result, 'RunTests is disabled')) {
+                $this->line('<fg=yellow>  ⚠ Refused — tests are disabled in this environment.</>');
             } elseif (str_contains($result, 'FAILED') || str_contains($result, 'Error')) {
                 $this->line('<fg=red>  ✗ Command reported failures — agent will handle them.</>');
             } else {

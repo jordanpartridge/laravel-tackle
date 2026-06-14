@@ -5,15 +5,16 @@ namespace Tackle\Tools;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Support\Facades\Process;
 use Laravel\Ai\Tools\Request;
+use Tackle\Support\CommandGuard;
 use Tackle\Support\PathGuard;
 
 class RunTests extends AbstractTool
 {
-    public function __construct(private PathGuard $guard) {}
+    public function __construct(private PathGuard $guard, private CommandGuard $commandGuard) {}
 
     public function description(): string
     {
-        return 'Run the test suite (Pest or PHPUnit via php artisan test) as a subprocess and return the full output. Use after modifying code to verify correctness.';
+        return 'Run the test suite (Pest or PHPUnit via php artisan test) as a subprocess and return the full output. Use after modifying code to verify correctness. Requires "test" to be in the artisan allowlist for this environment.';
     }
 
     public function schema(JsonSchema $schema): array
@@ -26,6 +27,11 @@ class RunTests extends AbstractTool
 
     public function handle(Request $request): string
     {
+        $allowlist = $this->commandGuard->resolveList(config('tackle.artisan_allowlist', []));
+        if ($refusal = $this->commandGuard->check('test', $allowlist)) {
+            return $refusal;
+        }
+
         $workspace = $this->guard->workspace();
 
         if (app()->environment('production') && ! file_exists($workspace . '/.env.testing')) {
