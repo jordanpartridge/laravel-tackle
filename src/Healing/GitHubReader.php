@@ -3,6 +3,7 @@
 namespace Tackle\Healing;
 
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Process;
 use Throwable;
 
 class GitHubReader
@@ -114,9 +115,22 @@ class GitHubReader
 
     private function credentials(): array
     {
+        $token = config('ai-code.github.token') ?: $this->resolveGhToken();
+
         return [
-            config('ai-code.github.token') ?: null,
-            config('ai-code.github.repo')  ?: null,
+            $token ?: null,
+            config('ai-code.github.repo') ?: null,
         ];
+    }
+
+    private function resolveGhToken(): ?string
+    {
+        try {
+            $result = Process::run(['gh', 'auth', 'token']);
+            $token  = trim($result->output());
+            return ($result->successful() && $token !== '') ? $token : null;
+        } catch (Throwable) {
+            return null;
+        }
     }
 }

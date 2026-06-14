@@ -138,20 +138,21 @@ class HealthCommand extends Command
 
     private function checkGitHub(): void
     {
-        $token = config('ai-code.github.token');
+        $token = config('ai-code.github.token') ?: $this->resolveGhToken();
         $repo  = config('ai-code.github.repo');
 
         if ($token && $repo) {
-            $this->pass("GitHub configured ({$repo}) — ReadGitHubIssue tool is active");
+            $source = config('ai-code.github.token') ? 'GITHUB_TOKEN' : 'gh CLI';
+            $this->pass("GitHub configured ({$repo}) via {$source} — ReadGitHubIssue tool is active");
         } elseif ($token && ! $repo) {
             $this->notice(
-                'GITHUB_TOKEN set but GITHUB_REPO is missing — ReadGitHubIssue tool will no-op',
+                'GitHub token found but GITHUB_REPO is missing — ReadGitHubIssue tool will no-op',
                 'Set GITHUB_REPO=owner/repo in .env'
             );
         } else {
             $this->notice(
                 'GitHub not configured — ReadGitHubIssue tool will no-op',
-                'Set GITHUB_TOKEN and GITHUB_REPO in .env to enable it'
+                'Set GITHUB_TOKEN (or run: gh auth login) and GITHUB_REPO in .env to enable it'
             );
         }
     }
