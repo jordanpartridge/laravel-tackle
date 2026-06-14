@@ -32,7 +32,7 @@ class AskUser extends AbstractTool
     public function handle(Request $request): string
     {
         $question = $request->string('question', 'Choose an option:');
-        $options  = (array) $request->get('options', []);
+        $options  = $request->array('options');
         $multiple = $request->boolean('multiple', false);
 
         if (empty($options)) {
