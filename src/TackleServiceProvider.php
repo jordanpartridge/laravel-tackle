@@ -8,6 +8,7 @@ use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Tackle\Agents\DefaultCodingAgent;
 use Tackle\Commands\CodeCommand;
+use Tackle\Commands\ReviewCommand;
 use Tackle\Contracts\CodingAgent;
 use Tackle\Healing\JobFailureListener;
 
@@ -18,7 +19,7 @@ class TackleServiceProvider extends PackageServiceProvider
         $package
             ->name('laravel-tackle')
             ->hasConfigFile('ai-code')
-            ->hasCommand(CodeCommand::class);
+            ->hasCommands([CodeCommand::class, ReviewCommand::class]);
     }
 
     public function packageRegistered(): void
