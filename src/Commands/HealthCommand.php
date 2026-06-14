@@ -27,7 +27,7 @@ class HealthCommand extends Command
         $this->checkGit();
         $this->checkEnvTesting();
 
-        if (config('ai-code.healing.enabled', false)) {
+        if (config('tackle.healing.enabled', false)) {
             $this->checkHealing();
         }
 
@@ -42,10 +42,10 @@ class HealthCommand extends Command
 
     private function checkConfig(): void
     {
-        if (file_exists(config_path('ai-code.php'))) {
-            $this->pass('config/ai-code.php published');
+        if (file_exists(config_path('tackle.php'))) {
+            $this->pass('config/tackle.php published');
         } else {
-            $this->check('config/ai-code.php not found', 'Run: php artisan vendor:publish --tag="tackle-config"');
+            $this->check('config/tackle.php not found', 'Run: php artisan vendor:publish --tag="tackle-config"');
         }
     }
 
@@ -60,7 +60,7 @@ class HealthCommand extends Command
 
     private function checkApiKey(): void
     {
-        $provider = config('ai-code.provider', 'anthropic');
+        $provider = config('tackle.provider', 'anthropic');
         $key      = config("ai.providers.{$provider}.api_key");
 
         if (! empty($key)) {
@@ -119,10 +119,10 @@ class HealthCommand extends Command
             );
         }
 
-        $mode = config('ai-code.healing.mode', 'pr');
+        $mode = config('tackle.healing.mode', 'pr');
 
         if ($mode === 'pr') {
-            $token = config('ai-code.healing.github_token')
+            $token = config('tackle.healing.github_token')
                 ?? $this->resolveGhToken();
 
             if ($token) {
@@ -138,11 +138,11 @@ class HealthCommand extends Command
 
     private function checkGitHub(): void
     {
-        $token = config('ai-code.github.token') ?: $this->resolveGhToken();
-        $repo  = config('ai-code.github.repo');
+        $token = config('tackle.github.token') ?: $this->resolveGhToken();
+        $repo  = config('tackle.github.repo');
 
         if ($token && $repo) {
-            $source = config('ai-code.github.token') ? 'GITHUB_TOKEN' : 'gh CLI';
+            $source = config('tackle.github.token') ? 'GITHUB_TOKEN' : 'gh CLI';
             $this->pass("GitHub configured ({$repo}) via {$source} — ReadGitHubIssue tool is active");
         } elseif ($token && ! $repo) {
             $this->notice(
@@ -159,8 +159,8 @@ class HealthCommand extends Command
 
     private function checkSentry(): void
     {
-        $token = config('ai-code.sentry.auth_token');
-        $org   = config('ai-code.sentry.org');
+        $token = config('tackle.sentry.auth_token');
+        $org   = config('tackle.sentry.org');
 
         if ($token && $org) {
             $this->pass('Sentry configured — ReadSentryIssue tool is active');

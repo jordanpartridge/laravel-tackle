@@ -41,7 +41,7 @@ class SentryReader
     public function recent(int $limit = 10): string
     {
         [$token, $org] = $this->credentials();
-        $project       = config('ai-code.sentry.project');
+        $project       = config('tackle.sentry.project');
 
         if (! $token || ! $org || ! $project) {
             return '';
@@ -119,8 +119,8 @@ class SentryReader
     private function credentials(): array
     {
         return [
-            config('ai-code.sentry.auth_token') ?: null,
-            config('ai-code.sentry.org') ?: null,
+            config('tackle.sentry.auth_token') ?: null,
+            config('tackle.sentry.org') ?: null,
         ];
     }
 }

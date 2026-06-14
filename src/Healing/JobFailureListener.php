@@ -42,7 +42,7 @@ class JobFailureListener
         }
 
         // Threshold check: how many times has this job class failed before?
-        $threshold = (int) config('ai-code.healing.threshold', 1);
+        $threshold = (int) config('tackle.healing.threshold', 1);
         if ($threshold > 1) {
             $count = DB::table('failed_jobs')
                 ->where('payload', 'like', '%' . addslashes($jobClass) . '%')

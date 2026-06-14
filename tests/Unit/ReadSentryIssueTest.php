@@ -10,8 +10,8 @@ use Laravel\Ai\Tools\Request;
 // ---------------------------------------------------------------------------
 
 it('returns empty string when auth token is not configured', function () {
-    config()->set('ai-code.sentry.auth_token', null);
-    config()->set('ai-code.sentry.org', 'my-org');
+    config()->set('tackle.sentry.auth_token', null);
+    config()->set('tackle.sentry.org', 'my-org');
 
     $reader = new SentryReader();
 
@@ -20,8 +20,8 @@ it('returns empty string when auth token is not configured', function () {
 });
 
 it('returns empty string when org is not configured', function () {
-    config()->set('ai-code.sentry.auth_token', 'sntrys_token');
-    config()->set('ai-code.sentry.org', null);
+    config()->set('tackle.sentry.auth_token', 'sntrys_token');
+    config()->set('tackle.sentry.org', null);
 
     $reader = new SentryReader();
 
@@ -34,8 +34,8 @@ it('returns empty string when org is not configured', function () {
 // ---------------------------------------------------------------------------
 
 it('returns empty string when Sentry API returns a non-2xx response for forIssue', function () {
-    config()->set('ai-code.sentry.auth_token', 'sntrys_token');
-    config()->set('ai-code.sentry.org', 'my-org');
+    config()->set('tackle.sentry.auth_token', 'sntrys_token');
+    config()->set('tackle.sentry.org', 'my-org');
 
     Http::fake([
         'sentry.io/*' => Http::response([], 401),
@@ -47,8 +47,8 @@ it('returns empty string when Sentry API returns a non-2xx response for forIssue
 });
 
 it('formats a Sentry issue event correctly', function () {
-    config()->set('ai-code.sentry.auth_token', 'sntrys_token');
-    config()->set('ai-code.sentry.org', 'my-org');
+    config()->set('tackle.sentry.auth_token', 'sntrys_token');
+    config()->set('tackle.sentry.org', 'my-org');
 
     Http::fake([
         'sentry.io/*' => Http::response([
@@ -93,9 +93,9 @@ it('formats a Sentry issue event correctly', function () {
 // ---------------------------------------------------------------------------
 
 it('returns empty string when project is not configured for recent()', function () {
-    config()->set('ai-code.sentry.auth_token', 'sntrys_token');
-    config()->set('ai-code.sentry.org', 'my-org');
-    config()->set('ai-code.sentry.project', null);
+    config()->set('tackle.sentry.auth_token', 'sntrys_token');
+    config()->set('tackle.sentry.org', 'my-org');
+    config()->set('tackle.sentry.project', null);
 
     $reader = new SentryReader();
 
@@ -103,9 +103,9 @@ it('returns empty string when project is not configured for recent()', function 
 });
 
 it('returns empty string when Sentry API returns a non-2xx response for recent()', function () {
-    config()->set('ai-code.sentry.auth_token', 'sntrys_token');
-    config()->set('ai-code.sentry.org', 'my-org');
-    config()->set('ai-code.sentry.project', 'my-project');
+    config()->set('tackle.sentry.auth_token', 'sntrys_token');
+    config()->set('tackle.sentry.org', 'my-org');
+    config()->set('tackle.sentry.project', 'my-project');
 
     Http::fake([
         'sentry.io/*' => Http::response([], 403),
@@ -117,9 +117,9 @@ it('returns empty string when Sentry API returns a non-2xx response for recent()
 });
 
 it('formats recent issues correctly', function () {
-    config()->set('ai-code.sentry.auth_token', 'sntrys_token');
-    config()->set('ai-code.sentry.org', 'my-org');
-    config()->set('ai-code.sentry.project', 'my-project');
+    config()->set('tackle.sentry.auth_token', 'sntrys_token');
+    config()->set('tackle.sentry.org', 'my-org');
+    config()->set('tackle.sentry.project', 'my-project');
 
     Http::fake([
         'sentry.io/*' => Http::response([
@@ -139,9 +139,9 @@ it('formats recent issues correctly', function () {
 });
 
 it('returns no issues message when API returns empty array', function () {
-    config()->set('ai-code.sentry.auth_token', 'sntrys_token');
-    config()->set('ai-code.sentry.org', 'my-org');
-    config()->set('ai-code.sentry.project', 'my-project');
+    config()->set('tackle.sentry.auth_token', 'sntrys_token');
+    config()->set('tackle.sentry.org', 'my-org');
+    config()->set('tackle.sentry.project', 'my-project');
 
     Http::fake([
         'sentry.io/*' => Http::response([], 200),
@@ -157,8 +157,8 @@ it('returns no issues message when API returns empty array', function () {
 // ---------------------------------------------------------------------------
 
 it('ReadSentryIssue returns not-configured message when credentials are missing', function () {
-    config()->set('ai-code.sentry.auth_token', null);
-    config()->set('ai-code.sentry.org', null);
+    config()->set('tackle.sentry.auth_token', null);
+    config()->set('tackle.sentry.org', null);
 
     $tool   = new ReadSentryIssue(new SentryReader());
     $result = $tool->handle(new Request(['issue_id' => '4821']));
@@ -167,9 +167,9 @@ it('ReadSentryIssue returns not-configured message when credentials are missing'
 });
 
 it('ReadSentryIssue routes to recent() when no issue_id is given', function () {
-    config()->set('ai-code.sentry.auth_token', 'sntrys_token');
-    config()->set('ai-code.sentry.org', 'my-org');
-    config()->set('ai-code.sentry.project', null); // no project → empty from recent()
+    config()->set('tackle.sentry.auth_token', 'sntrys_token');
+    config()->set('tackle.sentry.org', 'my-org');
+    config()->set('tackle.sentry.project', null); // no project → empty from recent()
 
     $tool   = new ReadSentryIssue(new SentryReader());
     $result = $tool->handle(new Request([]));
@@ -178,9 +178,9 @@ it('ReadSentryIssue routes to recent() when no issue_id is given', function () {
 });
 
 it('ReadSentryIssue clamps limit between 1 and 25', function () {
-    config()->set('ai-code.sentry.auth_token', 'sntrys_token');
-    config()->set('ai-code.sentry.org', 'my-org');
-    config()->set('ai-code.sentry.project', 'my-project');
+    config()->set('tackle.sentry.auth_token', 'sntrys_token');
+    config()->set('tackle.sentry.org', 'my-org');
+    config()->set('tackle.sentry.project', 'my-project');
 
     Http::fake([
         'sentry.io/*' => Http::response([], 200),

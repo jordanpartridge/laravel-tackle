@@ -17,7 +17,7 @@ class GitHubClient
             return $this->resolvedToken ?: null;
         }
 
-        $token = config('ai-code.github.token') ?: $this->resolveGhToken();
+        $token = config('tackle.github.token') ?: $this->resolveGhToken();
         $this->resolvedToken = $token ?? '';
 
         return $token ?: null;
@@ -25,7 +25,7 @@ class GitHubClient
 
     public function repo(): ?string
     {
-        return config('ai-code.github.repo') ?: null;
+        return config('tackle.github.repo') ?: null;
     }
 
     public function configured(): bool

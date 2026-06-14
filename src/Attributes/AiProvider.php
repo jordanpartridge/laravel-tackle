@@ -12,7 +12,7 @@ use Illuminate\Contracts\Container\ContextualAttribute;
  * Usage:
  *   public function __construct(#[AiProvider] string $provider = 'anthropic') {}
  *
- * Reads config('ai-code.provider'). The default value on the parameter is
+ * Reads config('tackle.provider'). The default value on the parameter is
  * used only when the class is instantiated directly (e.g. in tests); the
  * container always injects the live config value.
  */
@@ -21,6 +21,6 @@ class AiProvider implements ContextualAttribute
 {
     public static function resolve(self $attribute, Container $container): string
     {
-        return config('ai-code.provider', 'anthropic');
+        return config('tackle.provider', 'anthropic');
     }
 }

@@ -84,8 +84,8 @@ class DefaultCodingAgent implements CodingAgent
         $workspace = $this->pathGuard->workspace();
 
         $guard       = app(CommandGuard::class);
-        $allowlist   = $guard->resolveList(config('ai-code.artisan_allowlist', []));
-        $destructive = $guard->resolveList(config('ai-code.artisan_destructive', []));
+        $allowlist   = $guard->resolveList(config('tackle.artisan_allowlist', []));
+        $destructive = $guard->resolveList(config('tackle.artisan_destructive', []));
 
         $allowlistStr   = $allowlist   ? implode(', ', $allowlist)   : '(none)';
         $destructiveStr = $destructive ? implode(', ', $destructive) : '(none)';

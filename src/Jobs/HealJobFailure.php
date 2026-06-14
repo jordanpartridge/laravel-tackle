@@ -32,7 +32,7 @@ class HealJobFailure extends AbstractHealJob
 
     protected function agentPrompt(): string
     {
-        $telescopeHint = config('ai-code.healing.telescope', true)
+        $telescopeHint = config('tackle.healing.telescope', true)
             ? "\n\nYou can call ReadTelescopeEntry with job_uuid=\"{$this->jobUuid}\" if you need richer context."
             : '';
 

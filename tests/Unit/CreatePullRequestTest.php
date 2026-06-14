@@ -27,8 +27,8 @@ function fakeGitSuccess(string $statusOutput = ' M app/Foo.php'): void
 // ---------------------------------------------------------------------------
 
 it('returns not-configured message when GitHub credentials are missing', function () {
-    config()->set('ai-code.github.token', null);
-    config()->set('ai-code.github.repo', null);
+    config()->set('tackle.github.token', null);
+    config()->set('tackle.github.repo', null);
 
     Process::fake([
         'gh*' => Process::result('', '', 1),
@@ -48,8 +48,8 @@ it('returns not-configured message when GitHub credentials are missing', functio
 // ---------------------------------------------------------------------------
 
 it('returns error when title is missing', function () {
-    config()->set('ai-code.github.token', 'ghp_token');
-    config()->set('ai-code.github.repo', 'acme/app');
+    config()->set('tackle.github.token', 'ghp_token');
+    config()->set('tackle.github.repo', 'acme/app');
 
     $result = makePrTool()->handle(new Request([
         'body'   => 'Some body.',
@@ -60,8 +60,8 @@ it('returns error when title is missing', function () {
 });
 
 it('returns error when no changes to commit', function () {
-    config()->set('ai-code.github.token', 'ghp_token');
-    config()->set('ai-code.github.repo', 'acme/app');
+    config()->set('tackle.github.token', 'ghp_token');
+    config()->set('tackle.github.repo', 'acme/app');
 
     Process::fake([
         'git status --porcelain' => Process::result(''), // empty = no changes
@@ -81,8 +81,8 @@ it('returns error when no changes to commit', function () {
 // ---------------------------------------------------------------------------
 
 it('creates branch, commits, pushes, and opens a PR', function () {
-    config()->set('ai-code.github.token', 'ghp_token');
-    config()->set('ai-code.github.repo', 'acme/app');
+    config()->set('tackle.github.token', 'ghp_token');
+    config()->set('tackle.github.repo', 'acme/app');
 
     fakeGitSuccess();
 
@@ -105,8 +105,8 @@ it('creates branch, commits, pushes, and opens a PR', function () {
 });
 
 it('appends Closes #N to PR body when issue_number is given', function () {
-    config()->set('ai-code.github.token', 'ghp_token');
-    config()->set('ai-code.github.repo', 'acme/app');
+    config()->set('tackle.github.token', 'ghp_token');
+    config()->set('tackle.github.repo', 'acme/app');
 
     fakeGitSuccess();
 
@@ -125,8 +125,8 @@ it('appends Closes #N to PR body when issue_number is given', function () {
 });
 
 it('returns error when GitHub API rejects the PR', function () {
-    config()->set('ai-code.github.token', 'ghp_token');
-    config()->set('ai-code.github.repo', 'acme/app');
+    config()->set('tackle.github.token', 'ghp_token');
+    config()->set('tackle.github.repo', 'acme/app');
 
     fakeGitSuccess();
 
@@ -144,8 +144,8 @@ it('returns error when GitHub API rejects the PR', function () {
 });
 
 it('returns error when git checkout fails', function () {
-    config()->set('ai-code.github.token', 'ghp_token');
-    config()->set('ai-code.github.repo', 'acme/app');
+    config()->set('tackle.github.token', 'ghp_token');
+    config()->set('tackle.github.repo', 'acme/app');
 
     Process::fake([
         'git status --porcelain' => Process::result(' M app/Foo.php'),

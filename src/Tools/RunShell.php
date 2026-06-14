@@ -39,14 +39,14 @@ class RunShell extends AbstractTool
             return 'A non-empty command is required.';
         }
 
-        $mode = config('ai-code.shell', 'approve');
+        $mode = config('tackle.shell', 'approve');
 
         return match ($mode) {
             'off'       => $this->refuseAll($command),
             'allowlist' => $this->runIfAllowed($command),
             'approve'   => $this->runWithApproval($command),
             'yolo'      => $this->runUnrestricted($command),
-            default     => "Unknown shell mode '{$mode}'. Check your ai-code config.",
+            default     => "Unknown shell mode '{$mode}'. Check your tackle config.",
         };
     }
 
@@ -57,7 +57,7 @@ class RunShell extends AbstractTool
 
     private function runIfAllowed(string $command): string
     {
-        $allowlist = config('ai-code.shell_allowlist', []);
+        $allowlist = config('tackle.shell_allowlist', []);
 
         if ($refusal = $this->commandGuard->check($command, $allowlist)) {
             return $refusal;

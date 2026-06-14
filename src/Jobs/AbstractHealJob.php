@@ -24,7 +24,7 @@ abstract class AbstractHealJob implements ShouldQueue
 
     public function __construct()
     {
-        $this->queue = config('ai-code.healing.queue', 'healer');
+        $this->queue = config('tackle.healing.queue', 'healer');
     }
 
     // -----------------------------------------------------------------------
@@ -49,12 +49,12 @@ abstract class AbstractHealJob implements ShouldQueue
 
     public function handle(SandboxRunner $runner, GitHubTokenReader $tokenReader): void
     {
-        $branchName   = config('ai-code.healing.branch_prefix', 'tackle/heal-') . $this->branchSuffix();
+        $branchName   = config('tackle.healing.branch_prefix', 'tackle/heal-') . $this->branchSuffix();
         $worktreePath = null;
         $outcome      = 'failed';
         $prUrl        = null;
         $testsPassed  = false;
-        $mode         = config('ai-code.healing.mode', 'pr');
+        $mode         = config('tackle.healing.mode', 'pr');
 
         try {
             $worktreePath = $runner->prepare($branchName);

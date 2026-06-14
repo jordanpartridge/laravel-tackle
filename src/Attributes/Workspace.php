@@ -13,7 +13,7 @@ use Tackle\Support\PathGuard;
  * Usage:
  *   public function __construct(#[Workspace] PathGuard $guard) {}
  *
- * The resolved PathGuard reads its root from config('ai-code.workspace'),
+ * The resolved PathGuard reads its root from config('tackle.workspace'),
  * falling back to base_path(). For the healing worktree, PathGuard is
  * instantiated directly with the runtime path instead.
  */

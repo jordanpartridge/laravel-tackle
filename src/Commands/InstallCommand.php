@@ -38,7 +38,7 @@ class InstallCommand extends Command
     private function publishConfig(): void
     {
         $this->callSilently('vendor:publish', ['--tag' => 'tackle-config']);
-        $this->line('  <fg=green>✓</> Config published → <fg=cyan>config/ai-code.php</>');
+        $this->line('  <fg=green>✓</> Config published → <fg=cyan>config/tackle.php</>');
     }
 
     private function publishMigrations(): void

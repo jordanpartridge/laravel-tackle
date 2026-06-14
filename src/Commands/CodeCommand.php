@@ -62,12 +62,12 @@ class CodeCommand extends Command
                 $this->error("Invalid --shell value '{$shell}'. Must be one of: off, allowlist, approve, yolo.");
                 return self::FAILURE;
             }
-            config(['ai-code.shell' => $shell]);
+            config(['tackle.shell' => $shell]);
         }
 
-        $model     = config('ai-code.model', 'claude-sonnet-4-6');
-        $budgetUsd = config('ai-code.budget_usd', 1.00);
-        $shellMode = config('ai-code.shell', 'approve');
+        $model     = config('tackle.model', 'claude-sonnet-4-6');
+        $budgetUsd = config('tackle.budget_usd', 1.00);
+        $shellMode = config('tackle.shell', 'approve');
 
         title('Tackle — Ready');
         intro("Laravel Tackle  ·  {$model}  ·  \${$budgetUsd} budget  ·  shell: {$shellMode}");

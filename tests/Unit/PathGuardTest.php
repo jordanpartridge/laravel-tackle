@@ -6,8 +6,8 @@ beforeEach(function () {
     $this->workspace = sys_get_temp_dir() . '/tackle-tests';
     @mkdir($this->workspace, 0755, true);
 
-    config()->set('ai-code.workspace', $this->workspace);
-    config()->set('ai-code.protected_paths', ['.env', '.env.*', 'storage/*', 'vendor/*', '.git/*']);
+    config()->set('tackle.workspace', $this->workspace);
+    config()->set('tackle.protected_paths', ['.env', '.env.*', 'storage/*', 'vendor/*', '.git/*']);
 });
 
 afterEach(function () {

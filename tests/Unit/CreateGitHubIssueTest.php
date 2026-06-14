@@ -12,8 +12,8 @@ function makeIssueTool(): CreateGitHubIssue
 }
 
 it('returns not-configured message when credentials are missing', function () {
-    config()->set('ai-code.github.token', null);
-    config()->set('ai-code.github.repo', null);
+    config()->set('tackle.github.token', null);
+    config()->set('tackle.github.repo', null);
 
     Process::fake(['gh*' => Process::result('', '', 1)]);
 
@@ -25,8 +25,8 @@ it('returns not-configured message when credentials are missing', function () {
 });
 
 it('returns error when title is missing', function () {
-    config()->set('ai-code.github.token', 'ghp_token');
-    config()->set('ai-code.github.repo', 'acme/app');
+    config()->set('tackle.github.token', 'ghp_token');
+    config()->set('tackle.github.repo', 'acme/app');
 
     $result = makeIssueTool()->handle(new Request([]));
 
@@ -34,8 +34,8 @@ it('returns error when title is missing', function () {
 });
 
 it('creates an issue and returns the URL', function () {
-    config()->set('ai-code.github.token', 'ghp_token');
-    config()->set('ai-code.github.repo', 'acme/app');
+    config()->set('tackle.github.token', 'ghp_token');
+    config()->set('tackle.github.repo', 'acme/app');
 
     Http::fake([
         '*api.github.com*' => Http::response([
@@ -55,8 +55,8 @@ it('creates an issue and returns the URL', function () {
 });
 
 it('sends labels when provided', function () {
-    config()->set('ai-code.github.token', 'ghp_token');
-    config()->set('ai-code.github.repo', 'acme/app');
+    config()->set('tackle.github.token', 'ghp_token');
+    config()->set('tackle.github.repo', 'acme/app');
 
     Http::fake([
         '*api.github.com*' => Http::response(['number' => 8, 'html_url' => 'https://github.com/acme/app/issues/8'], 201),
@@ -74,8 +74,8 @@ it('sends labels when provided', function () {
 });
 
 it('returns error when GitHub API rejects the request', function () {
-    config()->set('ai-code.github.token', 'ghp_token');
-    config()->set('ai-code.github.repo', 'acme/app');
+    config()->set('tackle.github.token', 'ghp_token');
+    config()->set('tackle.github.repo', 'acme/app');
 
     Http::fake([
         '*api.github.com*' => Http::response(['message' => 'Validation Failed'], 422),

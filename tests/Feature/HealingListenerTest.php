@@ -7,9 +7,9 @@ use Tackle\Healing\JobFailureListener;
 use Tackle\Jobs\HealJobFailure;
 
 beforeEach(function () {
-    config()->set('ai-code.healing.enabled', true);
-    config()->set('ai-code.healing.threshold', 1);
-    config()->set('ai-code.healing.queue', 'healer');
+    config()->set('tackle.healing.enabled', true);
+    config()->set('tackle.healing.threshold', 1);
+    config()->set('tackle.healing.queue', 'healer');
     config()->set('database.default', 'sqlite');
     config()->set('database.connections.sqlite', [
         'driver'   => 'sqlite',
@@ -65,7 +65,7 @@ it('does not dispatch when the failing job is itself HealJobFailure', function (
 it('builds HealJobFailure with correct queue name', function () {
     Queue::fake();
 
-    config()->set('ai-code.healing.queue', 'custom-healer');
+    config()->set('tackle.healing.queue', 'custom-healer');
 
     $payload = json_encode([
         'displayName' => 'App\\Jobs\\ProcessOrder',

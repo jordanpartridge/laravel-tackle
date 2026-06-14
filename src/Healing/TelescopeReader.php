@@ -43,7 +43,7 @@ class TelescopeReader
 
     public function forJob(string $jobUuid): string
     {
-        if (!config('ai-code.healing.telescope', true)) {
+        if (!config('tackle.healing.telescope', true)) {
             return '';
         }
 

@@ -11,13 +11,13 @@ class PathGuard
 
     public function __construct(?string $workspace = null)
     {
-        $raw = $workspace ?? config('ai-code.workspace') ?? base_path();
+        $raw = $workspace ?? config('tackle.workspace') ?? base_path();
         $this->workspace = rtrim(
             (is_dir($raw) ? (realpath($raw) ?: $raw) : $raw),
             DIRECTORY_SEPARATOR
         );
 
-        $this->protectedPatterns = config('ai-code.protected_paths', [
+        $this->protectedPatterns = config('tackle.protected_paths', [
             '.env', '.env.*', 'storage/*', 'vendor/*', '.git/*',
         ]);
     }

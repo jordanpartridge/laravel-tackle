@@ -63,8 +63,8 @@ class ChargeSubscription implements ShouldQueue
 
 Tackle ships three Laravel contextual attributes for constructor injection:
 
-- `#[AiProvider]` — injects `config('ai-code.provider')`
-- `#[AiModel]` — injects `config('ai-code.model')`
+- `#[AiProvider]` — injects `config('tackle.provider')`
+- `#[AiModel]` — injects `config('tackle.model')`
 - `#[Workspace]` — injects a `PathGuard` configured for the application workspace
 
 ### Built-in tools

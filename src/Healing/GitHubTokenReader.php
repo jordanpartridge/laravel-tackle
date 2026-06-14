@@ -7,7 +7,7 @@ class GitHubTokenReader
     public function token(): ?string
     {
         // 1. Explicit config / env var
-        $token = config('ai-code.healing.github_token');
+        $token = config('tackle.healing.github_token');
         if ($token) {
             return $token;
         }

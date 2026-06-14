@@ -10,8 +10,8 @@ use Laravel\Ai\Tools\Request;
 // ---------------------------------------------------------------------------
 
 it('returns empty string when token is not configured', function () {
-    config()->set('ai-code.github.token', null);
-    config()->set('ai-code.github.repo', 'acme/app');
+    config()->set('tackle.github.token', null);
+    config()->set('tackle.github.repo', 'acme/app');
 
     \Illuminate\Support\Facades\Process::fake(['gh*' => \Illuminate\Support\Facades\Process::result('', '', 1)]);
 
@@ -22,8 +22,8 @@ it('returns empty string when token is not configured', function () {
 });
 
 it('returns empty string when repo is not configured', function () {
-    config()->set('ai-code.github.token', 'ghp_token');
-    config()->set('ai-code.github.repo', null);
+    config()->set('tackle.github.token', 'ghp_token');
+    config()->set('tackle.github.repo', null);
 
     \Illuminate\Support\Facades\Process::fake(['gh*' => \Illuminate\Support\Facades\Process::result('', '', 1)]);
 
@@ -38,8 +38,8 @@ it('returns empty string when repo is not configured', function () {
 // ---------------------------------------------------------------------------
 
 it('returns empty string when GitHub API returns a non-2xx response for forIssue', function () {
-    config()->set('ai-code.github.token', 'ghp_token');
-    config()->set('ai-code.github.repo', 'acme/app');
+    config()->set('tackle.github.token', 'ghp_token');
+    config()->set('tackle.github.repo', 'acme/app');
 
     Http::fake([
         'api.github.com/*' => Http::response([], 401),
@@ -51,8 +51,8 @@ it('returns empty string when GitHub API returns a non-2xx response for forIssue
 });
 
 it('formats a GitHub issue with body and comments correctly', function () {
-    config()->set('ai-code.github.token', 'ghp_token');
-    config()->set('ai-code.github.repo', 'acme/app');
+    config()->set('tackle.github.token', 'ghp_token');
+    config()->set('tackle.github.repo', 'acme/app');
 
     Http::fake([
         '*issues/42/comments*' => Http::response([
@@ -88,8 +88,8 @@ it('formats a GitHub issue with body and comments correctly', function () {
 });
 
 it('formats an issue without labels or comments', function () {
-    config()->set('ai-code.github.token', 'ghp_token');
-    config()->set('ai-code.github.repo', 'acme/app');
+    config()->set('tackle.github.token', 'ghp_token');
+    config()->set('tackle.github.repo', 'acme/app');
 
     Http::fake([
         '*issues/7/comments*' => Http::response([], 200),
@@ -117,8 +117,8 @@ it('formats an issue without labels or comments', function () {
 // ---------------------------------------------------------------------------
 
 it('returns empty string when GitHub API returns a non-2xx response for recent()', function () {
-    config()->set('ai-code.github.token', 'ghp_token');
-    config()->set('ai-code.github.repo', 'acme/app');
+    config()->set('tackle.github.token', 'ghp_token');
+    config()->set('tackle.github.repo', 'acme/app');
 
     Http::fake([
         'api.github.com/*' => Http::response([], 403),
@@ -130,8 +130,8 @@ it('returns empty string when GitHub API returns a non-2xx response for recent()
 });
 
 it('formats recent issues correctly and excludes pull requests', function () {
-    config()->set('ai-code.github.token', 'ghp_token');
-    config()->set('ai-code.github.repo', 'acme/app');
+    config()->set('tackle.github.token', 'ghp_token');
+    config()->set('tackle.github.repo', 'acme/app');
 
     Http::fake([
         'api.github.com/*' => Http::response([
@@ -151,8 +151,8 @@ it('formats recent issues correctly and excludes pull requests', function () {
 });
 
 it('returns no issues message when API returns empty array', function () {
-    config()->set('ai-code.github.token', 'ghp_token');
-    config()->set('ai-code.github.repo', 'acme/app');
+    config()->set('tackle.github.token', 'ghp_token');
+    config()->set('tackle.github.repo', 'acme/app');
 
     Http::fake([
         'api.github.com/*' => Http::response([], 200),
@@ -168,8 +168,8 @@ it('returns no issues message when API returns empty array', function () {
 // ---------------------------------------------------------------------------
 
 it('ReadGitHubIssue returns not-configured message when credentials are missing', function () {
-    config()->set('ai-code.github.token', null);
-    config()->set('ai-code.github.repo', null);
+    config()->set('tackle.github.token', null);
+    config()->set('tackle.github.repo', null);
 
     \Illuminate\Support\Facades\Process::fake(['gh*' => \Illuminate\Support\Facades\Process::result('', '', 1)]);
 
@@ -180,8 +180,8 @@ it('ReadGitHubIssue returns not-configured message when credentials are missing'
 });
 
 it('ReadGitHubIssue routes to recent() when no issue_number is given', function () {
-    config()->set('ai-code.github.token', null);
-    config()->set('ai-code.github.repo', null);
+    config()->set('tackle.github.token', null);
+    config()->set('tackle.github.repo', null);
 
     \Illuminate\Support\Facades\Process::fake(['gh*' => \Illuminate\Support\Facades\Process::result('', '', 1)]);
 
@@ -192,8 +192,8 @@ it('ReadGitHubIssue routes to recent() when no issue_number is given', function 
 });
 
 it('ReadGitHubIssue clamps limit between 1 and 25', function () {
-    config()->set('ai-code.github.token', 'ghp_token');
-    config()->set('ai-code.github.repo', 'acme/app');
+    config()->set('tackle.github.token', 'ghp_token');
+    config()->set('tackle.github.repo', 'acme/app');
 
     Http::fake([
         'api.github.com/*' => Http::response([], 200),

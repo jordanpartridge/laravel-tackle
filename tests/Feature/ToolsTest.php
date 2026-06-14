@@ -21,8 +21,8 @@ function workspace(): string
 
 function makeGuard(): PathGuard
 {
-    config()->set('ai-code.workspace', workspace());
-    config()->set('ai-code.protected_paths', ['.env', '.env.*', 'storage/*', 'vendor/*', '.git/*']);
+    config()->set('tackle.workspace', workspace());
+    config()->set('tackle.protected_paths', ['.env', '.env.*', 'storage/*', 'vendor/*', '.git/*']);
     return new PathGuard();
 }
 
@@ -209,30 +209,30 @@ it('WriteFile refuses writes outside workspace', function () {
 // ──────────────────────────────────────────────────────────────────────
 
 it('RunShell refuses everything in off mode', function () {
-    config()->set('ai-code.shell', 'off');
+    config()->set('tackle.shell', 'off');
 
     $result = (new RunShell(makeGuard(), new CommandGuard()))->handle(req(['command' => 'echo hello']));
     expect($result)->toContain('disabled');
 });
 
 it('RunShell allows allowlisted commands in allowlist mode', function () {
-    config()->set('ai-code.shell', 'allowlist');
-    config()->set('ai-code.shell_allowlist', ['echo']);
+    config()->set('tackle.shell', 'allowlist');
+    config()->set('tackle.shell_allowlist', ['echo']);
 
     $result = (new RunShell(makeGuard(), new CommandGuard()))->handle(req(['command' => 'echo hello']));
     expect($result)->toContain('hello');
 });
 
 it('RunShell refuses non-allowlisted commands in allowlist mode', function () {
-    config()->set('ai-code.shell', 'allowlist');
-    config()->set('ai-code.shell_allowlist', ['composer', 'npm']);
+    config()->set('tackle.shell', 'allowlist');
+    config()->set('tackle.shell_allowlist', ['composer', 'npm']);
 
     $result = (new RunShell(makeGuard(), new CommandGuard()))->handle(req(['command' => 'rm -rf /']));
     expect($result)->toContain('not in the allowlist');
 });
 
 it('RunShell runs commands in yolo mode', function () {
-    config()->set('ai-code.shell', 'yolo');
+    config()->set('tackle.shell', 'yolo');
 
     $result = (new RunShell(makeGuard(), new CommandGuard()))->handle(req(['command' => 'echo yolo-works']));
     expect($result)->toContain('yolo-works');

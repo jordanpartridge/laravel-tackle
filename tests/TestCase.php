@@ -16,11 +16,11 @@ class TestCase extends Orchestra
 
     protected function getEnvironmentSetUp($app): void
     {
-        config()->set('ai-code.workspace', sys_get_temp_dir() . '/tackle-tests');
-        config()->set('ai-code.protected_paths', ['.env', '.env.*', 'storage/*', 'vendor/*', '.git/*']);
-        config()->set('ai-code.shell', 'off');
-        config()->set('ai-code.artisan_allowlist', ['make:*', 'route:list', 'migrate', 'test']);
-        config()->set('ai-code.shell_allowlist', ['composer', 'npm', 'php artisan']);
-        config()->set('ai-code.budget_usd', 1.00);
+        config()->set('tackle.workspace', sys_get_temp_dir() . '/tackle-tests');
+        config()->set('tackle.protected_paths', ['.env', '.env.*', 'storage/*', 'vendor/*', '.git/*']);
+        config()->set('tackle.shell', 'off');
+        config()->set('tackle.artisan_allowlist', ['make:*', 'route:list', 'migrate', 'test']);
+        config()->set('tackle.shell_allowlist', ['composer', 'npm', 'php artisan']);
+        config()->set('tackle.budget_usd', 1.00);
     }
 }

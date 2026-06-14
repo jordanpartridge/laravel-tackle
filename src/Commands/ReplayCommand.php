@@ -40,7 +40,7 @@ class ReplayCommand extends Command
         $this->dispatch($entry);
 
         $this->line('');
-        $this->line('<fg=green>✓</> Healing job dispatched to the <fg=cyan>' . config('ai-code.healing.queue', 'healer') . '</> queue.');
+        $this->line('<fg=green>✓</> Healing job dispatched to the <fg=cyan>' . config('tackle.healing.queue', 'healer') . '</> queue.');
         $this->line('');
 
         return self::SUCCESS;

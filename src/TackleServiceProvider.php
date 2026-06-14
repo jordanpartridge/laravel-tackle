@@ -29,7 +29,7 @@ class TackleServiceProvider extends PackageServiceProvider
     {
         $package
             ->name('laravel-tackle')
-            ->hasConfigFile('ai-code')
+            ->hasConfigFile('tackle')
             ->hasMigration('create_tackle_healing_log_table')
             ->hasCommands([
                 InstallCommand::class,
@@ -57,7 +57,7 @@ class TackleServiceProvider extends PackageServiceProvider
             __DIR__ . '/../resources/stubs' => base_path('stubs/tackle'),
         ], 'tackle-stubs');
 
-        if (config('ai-code.healing.enabled', false)) {
+        if (config('tackle.healing.enabled', false)) {
             Event::listen(JobFailed::class, JobFailureListener::class);
             Event::listen(ScheduledTaskFailed::class, ScheduledTaskFailureListener::class);
         }

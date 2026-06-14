@@ -12,7 +12,7 @@ use Illuminate\Contracts\Container\ContextualAttribute;
  * Usage:
  *   public function __construct(#[AiModel] string $model = 'claude-sonnet-4-6') {}
  *
- * Reads config('ai-code.model'). The default value on the parameter is
+ * Reads config('tackle.model'). The default value on the parameter is
  * used only when the class is instantiated directly (e.g. in tests); the
  * container always injects the live config value.
  */
@@ -21,6 +21,6 @@ class AiModel implements ContextualAttribute
 {
     public static function resolve(self $attribute, Container $container): string
     {
-        return config('ai-code.model', 'claude-sonnet-4-6');
+        return config('tackle.model', 'claude-sonnet-4-6');
     }
 }

@@ -23,7 +23,7 @@ it('constructor workspace argument takes precedence over config', function () {
     $dir = sys_get_temp_dir() . '/tackle-override-' . uniqid();
     mkdir($dir, 0755, true);
 
-    config()->set('ai-code.workspace', sys_get_temp_dir() . '/should-not-be-used');
+    config()->set('tackle.workspace', sys_get_temp_dir() . '/should-not-be-used');
 
     $guard = new PathGuard($dir);
 
@@ -37,7 +37,7 @@ it('allows reads within the override workspace', function () {
     mkdir($dir . '/app', 0755, true);
     file_put_contents($dir . '/app/Foo.php', '<?php');
 
-    config()->set('ai-code.protected_paths', ['.env', 'vendor/*']);
+    config()->set('tackle.protected_paths', ['.env', 'vendor/*']);
 
     $guard = new PathGuard($dir);
 
@@ -64,19 +64,19 @@ it('blocks reads outside the override workspace', function () {
 // ---------------------------------------------------------------------------
 
 it('returns token from GITHUB_TOKEN env var', function () {
-    config()->set('ai-code.healing.github_token', null);
+    config()->set('tackle.healing.github_token', null);
 
     $reader = new GitHubTokenReader();
 
     // Token from config (which reads env) is already null above;
     // we test via the config key directly.
-    config()->set('ai-code.healing.github_token', 'ghp_from_config');
+    config()->set('tackle.healing.github_token', 'ghp_from_config');
 
     expect($reader->token())->toBe('ghp_from_config');
 });
 
 it('returns null when no token is available', function () {
-    config()->set('ai-code.healing.github_token', null);
+    config()->set('tackle.healing.github_token', null);
 
     // Write a blank gh hosts file to a temp location so the reader
     // doesn't accidentally pick up the developer's real token.
@@ -96,7 +96,7 @@ it('returns null when no token is available', function () {
 // ---------------------------------------------------------------------------
 
 it('returns empty string when telescope is disabled in config', function () {
-    config()->set('ai-code.healing.telescope', false);
+    config()->set('tackle.healing.telescope', false);
 
     $reader = new TelescopeReader();
 
@@ -104,7 +104,7 @@ it('returns empty string when telescope is disabled in config', function () {
 });
 
 it('returns empty string when Telescope class is not installed', function () {
-    config()->set('ai-code.healing.telescope', true);
+    config()->set('tackle.healing.telescope', true);
 
     // Laravel\Telescope\Telescope won't be available in the package's test
     // environment — so this should always return ''.

@@ -10,9 +10,9 @@ use Tackle\Jobs\HealJobFailure;
 use Tackle\Jobs\HealScheduledTask;
 
 beforeEach(function () {
-    config()->set('ai-code.healing.enabled', true);
-    config()->set('ai-code.healing.threshold', 1);
-    config()->set('ai-code.healing.queue', 'healer');
+    config()->set('tackle.healing.enabled', true);
+    config()->set('tackle.healing.threshold', 1);
+    config()->set('tackle.healing.queue', 'healer');
     config()->set('database.default', 'sqlite');
     config()->set('database.connections.sqlite', [
         'driver'   => 'sqlite',

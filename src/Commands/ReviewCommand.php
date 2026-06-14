@@ -157,7 +157,7 @@ class ReviewCommand extends Command
     private function renderBanner(): void
     {
         $scope = $this->scopeDescription();
-        $model = config('ai-code.model', 'claude-sonnet-4-6');
+        $model = config('tackle.model', 'claude-sonnet-4-6');
 
         $this->line('');
         $this->line('<fg=green;options=bold>Laravel Tackle — AI Code Review</>');

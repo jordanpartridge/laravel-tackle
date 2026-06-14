@@ -223,7 +223,7 @@ php artisan queue:work --queue=healer
 
 1. `GITHUB_TOKEN` in `.env`
 2. GitHub CLI — Tackle runs `gh auth token` automatically if `gh` is installed
-3. `ai-code.healing.github_token` in `config/ai-code.php`
+3. `tackle.healing.github_token` in `config/tackle.php`
 
 ### Opting a job out of healing
 
@@ -344,8 +344,8 @@ use Tackle\Attributes\AiModel;
 use Tackle\Attributes\Workspace;
 
 public function __construct(
-    #[AiProvider] string $provider,   // config('ai-code.provider')
-    #[AiModel]    string $model,      // config('ai-code.model')
+    #[AiProvider] string $provider,   // config('tackle.provider')
+    #[AiModel]    string $model,      // config('tackle.model')
     #[Workspace]  PathGuard $guard,   // PathGuard for the app workspace
 ) {}
 ```
@@ -357,5 +357,5 @@ public function __construct(
 - **`git worktree add failed`** — the project must have at least one commit: `git add -A && git commit -m "initial"`.
 - **Healer branch pushed but no PR** — GitHub token not found. Run `gh auth status` or set `GITHUB_TOKEN` in `.env`.
 - **Tests always fail in sandbox** — ensure `.env` and `.env.testing` exist and are committed or that the project has them; the worktree symlinks them automatically.
-- **Config not updated after publishing** — run `php artisan config:clear` after editing `config/ai-code.php`.
+- **Config not updated after publishing** — run `php artisan config:clear` after editing `config/tackle.php`.
 - **Healer skipping a job** — check for `#[Healable(false)]` on the job class or a `threshold` setting higher than the current failure count.

@@ -15,7 +15,7 @@ class BudgetTracker
     private float $budgetUsd;
 
     public function __construct(
-        #[Config('ai-code.budget_usd')] float $budgetUsd = 1.00,
+        #[Config('tackle.budget_usd')] float $budgetUsd = 1.00,
     ) {
         $this->budgetUsd = $budgetUsd;
     }

@@ -174,7 +174,7 @@ class SandboxRunner
             return null;
         }
 
-        $baseBranch = config('ai-code.healing.base_branch', 'main');
+        $baseBranch = config('tackle.healing.base_branch', 'main');
 
         try {
             $response = Http::withToken($token)
