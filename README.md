@@ -389,11 +389,48 @@ These tools are available to the agent in every session.
 | `GitDiff` | Shows a git diff — supports staged, a specific commit, a branch range, or a path. |
 | `ReadTelescopeEntry` | Reads Telescope exception entries. Pass a job UUID for a specific lookup, or omit to return recent exceptions. No-ops gracefully if Telescope is not installed. |
 | `ReadSentryIssue` | Fetches a Sentry issue by ID — exception, stacktrace, breadcrumbs, and request context. Omit the ID to list recent unresolved issues for the configured project. No-ops gracefully if `SENTRY_AUTH_TOKEN` / `SENTRY_ORG` are not set. |
+| `ReadGitHubIssue` | Fetches a GitHub issue by number — title, body, labels, and all comments. Omit the number to list recent open issues. No-ops gracefully if `GITHUB_TOKEN` / `GITHUB_REPO` are not set. |
 | `AskUser` | Presents the user with a `select()` or `multiselect()` prompt and returns their choice. The agent calls this when there are multiple valid paths and it wants the user to decide. |
 | `ConfirmAction` | Presents the user with a `confirm()` prompt before a destructive or irreversible operation. Returns `"confirmed"` or `"cancelled"`. |
 
 All file reads happen in-process. Everything that executes code runs as a
 subprocess, so a broken generated file cannot crash the agent session.
+
+---
+
+## GitHub Issues integration
+
+When `GITHUB_TOKEN` and `GITHUB_REPO` are set, the `ReadGitHubIssue` tool becomes active. The agent can fetch any issue by number — title, description, labels, and all comments — giving it full context before starting work.
+
+### Configuration
+
+Add these to your `.env`:
+
+```env
+GITHUB_TOKEN=ghp_...        # personal access token with repo scope
+GITHUB_REPO=owner/repo      # e.g. acme/my-app
+```
+
+The `GITHUB_TOKEN` is shared with the self-healer (PR mode), so no extra setup is needed if healing is already configured. Generate a token at **GitHub → Settings → Developer settings → Personal access tokens** with `repo` scope (or a fine-grained token with **Issues: read** permission).
+
+### How it works
+
+Ask the agent naturally:
+
+```
+> implement issue #42
+> what are the open GitHub issues?
+```
+
+When given an issue number, the tool fetches the issue body plus all comments and returns them as a single block of context. When no number is given, it returns a summary list of recent open issues (pull requests are filtered out automatically).
+
+### Health check
+
+```bash
+php artisan tackle:health
+```
+
+Reports `✓ GitHub configured (owner/repo) — ReadGitHubIssue tool is active` when both vars are present.
 
 ---
 

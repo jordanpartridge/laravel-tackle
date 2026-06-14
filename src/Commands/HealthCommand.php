@@ -31,6 +31,7 @@ class HealthCommand extends Command
             $this->checkHealing();
         }
 
+        $this->checkGitHub();
         $this->checkSentry();
         $this->checkWorktrees();
 
@@ -132,6 +133,26 @@ class HealthCommand extends Command
                     'Set GITHUB_TOKEN in .env, or authenticate with: gh auth login'
                 );
             }
+        }
+    }
+
+    private function checkGitHub(): void
+    {
+        $token = config('ai-code.github.token');
+        $repo  = config('ai-code.github.repo');
+
+        if ($token && $repo) {
+            $this->pass("GitHub configured ({$repo}) — ReadGitHubIssue tool is active");
+        } elseif ($token && ! $repo) {
+            $this->notice(
+                'GITHUB_TOKEN set but GITHUB_REPO is missing — ReadGitHubIssue tool will no-op',
+                'Set GITHUB_REPO=owner/repo in .env'
+            );
+        } else {
+            $this->notice(
+                'GitHub not configured — ReadGitHubIssue tool will no-op',
+                'Set GITHUB_TOKEN and GITHUB_REPO in .env to enable it'
+            );
         }
     }
 

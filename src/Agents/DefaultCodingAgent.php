@@ -21,6 +21,7 @@ use Tackle\Tools\ListRoutes;
 use Tackle\Tools\QueryDatabase;
 use Tackle\Tools\ReadFile;
 use Tackle\Tools\ReadLog;
+use Tackle\Tools\ReadGitHubIssue;
 use Tackle\Tools\ReadSentryIssue;
 use Tackle\Tools\ReadTelescopeEntry;
 use Tackle\Tools\RunArtisan;
@@ -58,6 +59,7 @@ class DefaultCodingAgent implements CodingAgent
         private readonly ListRoutes $listRoutes,
         private readonly ReadTelescopeEntry $readTelescopeEntry,
         private readonly ReadSentryIssue $readSentryIssue,
+        private readonly ReadGitHubIssue $readGitHubIssue,
         private readonly AskUser $askUser,
         private readonly ConfirmAction $confirmAction,
     ) {}
@@ -157,6 +159,7 @@ class DefaultCodingAgent implements CodingAgent
             $this->listRoutes,
             $this->readTelescopeEntry,
             $this->readSentryIssue,
+            $this->readGitHubIssue,
             $this->askUser,
             $this->confirmAction,
         ];

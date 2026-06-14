@@ -173,6 +173,25 @@ return [
     | SENTRY_PROJECT) so no extra setup is needed if you already use the Sentry CLI.
     |
     */
+    /*
+    |--------------------------------------------------------------------------
+    | GitHub Integration
+    |--------------------------------------------------------------------------
+    |
+    | When set, the ReadGitHubIssue tool can fetch issue details (title, body,
+    | labels, and all comments) directly from the GitHub API.
+    |
+    | token  - A GitHub personal access token with repo scope (or a fine-grained
+    |           token with Issues: read permission). Shared with the self-healer.
+    |           Generate one at https://github.com/settings/tokens
+    | repo   - The owner/repo slug, e.g. "acme/my-app".
+    |
+    */
+    'github' => [
+        'token' => env('GITHUB_TOKEN'),
+        'repo'  => env('GITHUB_REPO'),
+    ],
+
     'sentry' => [
         'auth_token' => env('SENTRY_AUTH_TOKEN'),
         'org'        => env('SENTRY_ORG'),

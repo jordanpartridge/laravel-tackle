@@ -203,7 +203,8 @@ class CodeCommand extends Command
             'GitDiff'            => '🔀 git diff' . (! empty($args['path']) ? ' ' . $args['path'] : ''),
             'ListRoutes'         => '🗺️  listing routes',
             'ReadTelescopeEntry' => '🔭 reading telescope',
-            'ReadSentryIssue'   => '🪲 reading sentry',
+            'ReadSentryIssue'    => '🪲 reading sentry',
+            'ReadGitHubIssue'    => '🐙 reading github issue',
             default              => '→ ' . $tool,
         };
 
