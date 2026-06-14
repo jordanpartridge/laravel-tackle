@@ -388,11 +388,53 @@ These tools are available to the agent in every session.
 | `ListRoutes` | Returns a formatted table of all registered routes with method, URI, name, and action. |
 | `GitDiff` | Shows a git diff — supports staged, a specific commit, a branch range, or a path. |
 | `ReadTelescopeEntry` | Reads Telescope exception entries. Pass a job UUID for a specific lookup, or omit to return recent exceptions. No-ops gracefully if Telescope is not installed. |
+| `ReadSentryIssue` | Fetches a Sentry issue by ID — exception, stacktrace, breadcrumbs, and request context. Omit the ID to list recent unresolved issues for the configured project. No-ops gracefully if `SENTRY_AUTH_TOKEN` / `SENTRY_ORG` are not set. |
 | `AskUser` | Presents the user with a `select()` or `multiselect()` prompt and returns their choice. The agent calls this when there are multiple valid paths and it wants the user to decide. |
 | `ConfirmAction` | Presents the user with a `confirm()` prompt before a destructive or irreversible operation. Returns `"confirmed"` or `"cancelled"`. |
 
 All file reads happen in-process. Everything that executes code runs as a
 subprocess, so a broken generated file cannot crash the agent session.
+
+---
+
+## Sentry integration
+
+When `SENTRY_AUTH_TOKEN` and `SENTRY_ORG` are set, the `ReadSentryIssue` tool becomes active. The agent can fetch the latest event for any Sentry issue — including the full exception, stacktrace, breadcrumbs, and HTTP request context — and use it as additional context when diagnosing bugs.
+
+### Configuration
+
+Add these to your `.env`:
+
+```env
+SENTRY_AUTH_TOKEN=sntrys_...   # auth token with issue:read scope
+SENTRY_ORG=your-org-slug       # visible in your Sentry URL (sentry.io/organizations/<slug>/)
+SENTRY_PROJECT=your-project    # project slug — required for listing recent issues
+```
+
+These are the same env vars used by the [Sentry CLI](https://docs.sentry.io/cli/), so no extra setup is needed if you already use it.
+
+Generate a token at **Sentry → Settings → Account → API → Auth Tokens** with the `issue:read` scope.
+
+### How it works
+
+Ask the agent naturally:
+
+```
+> there's a DivisionByZeroError in Sentry (#4821) — can you fix it?
+> what are my recent unresolved Sentry issues?
+```
+
+When given an issue ID, the tool calls `GET /api/0/organizations/{org}/issues/{id}/events/latest/` and returns the exception type, message, stacktrace (top 15 frames, most recent first), breadcrumbs (last 10), and request method/URL.
+
+When no ID is given, it calls `GET /api/0/projects/{org}/{project}/issues/` and returns a summary list of recent unresolved issues.
+
+### Health check
+
+```bash
+php artisan tackle:health
+```
+
+Reports `✓ Sentry configured — ReadSentryIssue tool is active` when credentials are present, or a warning with setup instructions if they are missing.
 
 ---
 
