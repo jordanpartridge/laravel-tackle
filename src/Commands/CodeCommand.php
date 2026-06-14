@@ -10,6 +10,7 @@ use Laravel\Ai\Streaming\Events\ToolCall;
 use Laravel\Ai\Streaming\Events\ToolResult;
 use Laravel\Prompts\Stream;
 use Tackle\Contracts\CodingAgent;
+use Tackle\Exceptions\AgentInterruptedException;
 use Tackle\Support\BudgetTracker;
 
 use function Laravel\Prompts\error as promptError;
@@ -35,6 +36,8 @@ class CodeCommand extends Command
 
     private ?Stream $activeStream = null;
     private array   $history      = [];
+    private bool    $interrupted  = false;
+    private bool    $agentRunning = false;
 
     public function handle(CodingAgent $agent, BudgetTracker $budget): int
     {
@@ -64,9 +67,11 @@ class CodeCommand extends Command
             config(['ai-code.shell' => $shell]);
         }
 
-        $model      = config('ai-code.model', 'claude-sonnet-4-6');
-        $budgetUsd  = config('ai-code.budget_usd', 1.00);
-        $shellMode  = config('ai-code.shell', 'approve');
+        $model     = config('ai-code.model', 'claude-sonnet-4-6');
+        $budgetUsd = config('ai-code.budget_usd', 1.00);
+        $shellMode = config('ai-code.shell', 'approve');
+
+        $this->registerInterruptHandler();
 
         title('Tackle — Ready');
         intro("Laravel Tackle  ·  {$model}  ·  \${$budgetUsd} budget  ·  shell: {$shellMode}");
@@ -77,7 +82,7 @@ class CodeCommand extends Command
                 options: array_reverse($this->history),
                 placeholder: 'Describe a task or type "exit" to quit.',
                 required: true,
-                hint: count($this->history) > 0 ? 'Use ↑↓ to browse history.' : '',
+                hint: count($this->history) > 0 ? 'Use ↑↓ to browse history. Ctrl+C during a run interrupts without ending the session.' : 'Ctrl+C during a run interrupts without ending the session.',
                 scroll: 8,
             );
 
@@ -110,6 +115,16 @@ class CodeCommand extends Command
                 note('The session is still active — continue with a new task.');
             }
 
+            if ($this->interrupted) {
+                $this->interrupted = false;
+                $this->line('');
+                warning('Interrupted — the agent has stopped. Your session is still active.');
+                title('Tackle — Ready');
+                $this->line('');
+                $this->line('<fg=gray>─────────────────────────────────────────────────────────</>');
+                continue;
+            }
+
             $this->showGitDiff();
 
             title('Tackle — Ready');
@@ -118,53 +133,88 @@ class CodeCommand extends Command
         }
     }
 
-    private function runAgentTurn(CodingAgent $agent, BudgetTracker $budget, string $task): void
+    private function registerInterruptHandler(): void
     {
-        $response = $agent->stream($task);
+        if (! function_exists('pcntl_async_signals') || ! function_exists('pcntl_signal')) {
+            return;
+        }
 
-        $response->each(function ($event) use ($budget) {
-            if ($event instanceof TextDelta) {
-                if ($this->activeStream === null) {
-                    $this->line('');
-                    $this->activeStream = stream();
-                }
-                $this->activeStream->append($event->delta);
-                return;
-            }
+        pcntl_async_signals(true);
 
-            if ($event instanceof ToolCall) {
-                $this->closeStream();
-                $this->renderToolCall($event);
-                return;
-            }
-
-            if ($event instanceof ToolResult) {
-                $this->renderToolResult($event);
-                return;
-            }
-
-            if ($event instanceof StreamEnd) {
-                $this->closeStream();
-                $budget->record($event->usage->promptTokens, $event->usage->completionTokens);
-
-                if ($budget->overBudget()) {
-                    promptError(sprintf(
-                        'Budget limit reached ($%.4f / $%.2f). Stopping.',
-                        $budget->estimatedCost(),
-                        $budget->budgetUsd(),
-                    ));
-                } elseif ($budget->estimatedCost() / $budget->budgetUsd() >= 0.8) {
-                    warning(sprintf(
-                        'Budget at %.0f%% ($%.4f / $%.2f) — consider wrapping up soon.',
-                        ($budget->estimatedCost() / $budget->budgetUsd()) * 100,
-                        $budget->estimatedCost(),
-                        $budget->budgetUsd(),
-                    ));
-                }
+        pcntl_signal(SIGINT, function () {
+            if ($this->agentRunning) {
+                // Mid-run: interrupt the turn, keep the session alive.
+                $this->interrupted = true;
+            } else {
+                // At the idle prompt: exit cleanly.
+                title('');
+                $this->line('');
+                outro('Goodbye!');
+                exit(0);
             }
         });
+    }
 
-        $this->closeStream();
+    private function runAgentTurn(CodingAgent $agent, BudgetTracker $budget, string $task): void
+    {
+        $this->agentRunning = true;
+        $this->interrupted  = false;
+
+        try {
+            $response = $agent->stream($task);
+
+            $response->each(function ($event) use ($budget) {
+                if ($this->interrupted) {
+                    $this->closeStream();
+                    throw new AgentInterruptedException();
+                }
+
+                if ($event instanceof TextDelta) {
+                    if ($this->activeStream === null) {
+                        $this->line('');
+                        $this->activeStream = stream();
+                    }
+                    $this->activeStream->append($event->delta);
+                    return;
+                }
+
+                if ($event instanceof ToolCall) {
+                    $this->closeStream();
+                    $this->renderToolCall($event);
+                    return;
+                }
+
+                if ($event instanceof ToolResult) {
+                    $this->renderToolResult($event);
+                    return;
+                }
+
+                if ($event instanceof StreamEnd) {
+                    $this->closeStream();
+                    $budget->record($event->usage->promptTokens, $event->usage->completionTokens);
+
+                    if ($budget->overBudget()) {
+                        promptError(sprintf(
+                            'Budget limit reached ($%.4f / $%.2f). Stopping.',
+                            $budget->estimatedCost(),
+                            $budget->budgetUsd(),
+                        ));
+                    } elseif ($budget->estimatedCost() / $budget->budgetUsd() >= 0.8) {
+                        warning(sprintf(
+                            'Budget at %.0f%% ($%.4f / $%.2f) — consider wrapping up soon.',
+                            ($budget->estimatedCost() / $budget->budgetUsd()) * 100,
+                            $budget->estimatedCost(),
+                            $budget->budgetUsd(),
+                        ));
+                    }
+                }
+            });
+        } catch (AgentInterruptedException) {
+            // Swallow — the main loop checks $this->interrupted and shows the message.
+        } finally {
+            $this->agentRunning = false;
+            $this->closeStream();
+        }
     }
 
     private function closeStream(): void
