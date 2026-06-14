@@ -73,16 +73,49 @@ return [
     |--------------------------------------------------------------------------
     |
     | Glob patterns for Artisan commands the agent may run unattended via
-    | RunArtisan. Commands not matching any pattern are refused.
+    | RunArtisan. Keyed by APP_ENV; use '*' as a catch-all. A flat (non-keyed)
+    | array is also accepted and applies to all environments (legacy format).
+    |
+    | Commands not matching any pattern are refused outright.
     |
     */
     'artisan_allowlist' => [
-        'make:*',
-        'migrate',
-        'migrate:*',
-        'db:seed',
-        'route:list',
-        'test',
+        'local' => [
+            'make:*',
+            'migrate:*',
+            'db:seed',
+            'route:list',
+            'test',
+        ],
+        'staging' => [
+            'migrate',
+            'route:list',
+        ],
+        'production' => [
+            'route:list',
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Artisan Destructive List
+    |--------------------------------------------------------------------------
+    |
+    | Commands that match these patterns trigger a hard terminal confirmation
+    | prompt before running — enforced in PHP, not by the model. An empty list
+    | for an environment means no destructive commands are permitted there at
+    | all (the agent will be refused even if the user confirms).
+    |
+    */
+    'artisan_destructive' => [
+        'local' => [
+            'migrate:fresh',
+            'migrate:reset',
+            'migrate:refresh',
+            'db:wipe',
+        ],
+        'staging'    => [],
+        'production' => [],
     ],
 
     /*

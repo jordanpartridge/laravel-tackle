@@ -8,6 +8,8 @@ use Laravel\Ai\Tools\Request;
 use Tackle\Support\CommandGuard;
 use Tackle\Support\PathGuard;
 
+use function Laravel\Prompts\confirm;
+
 class RunArtisan extends AbstractTool
 {
     public function __construct(
@@ -17,7 +19,7 @@ class RunArtisan extends AbstractTool
 
     public function description(): string
     {
-        return 'Run an Artisan command as a subprocess. Only commands matching the artisan_allowlist in config may run. Returns stdout on success, or exit code + stderr on failure.';
+        return 'Run an Artisan command as a subprocess. Commands in the artisan_allowlist run freely; commands in artisan_destructive require terminal confirmation; everything else is refused. Both lists are environment-aware. Returns stdout on success, or exit code + stderr on failure.';
     }
 
     public function schema(JsonSchema $schema): array
@@ -37,8 +39,15 @@ class RunArtisan extends AbstractTool
             return 'A non-empty command is required.';
         }
 
-        $allowlist = config('ai-code.artisan_allowlist', []);
-        if ($refusal = $this->commandGuard->check($command, $allowlist)) {
+        $allowlist   = $this->commandGuard->resolveList(config('ai-code.artisan_allowlist', []));
+        $destructive = $this->commandGuard->resolveList(config('ai-code.artisan_destructive', []));
+
+        if ($this->commandGuard->matches($command, $destructive)) {
+            echo PHP_EOL;
+            if (! confirm("⚠ Destructive: php artisan {$command} — proceed?", default: false)) {
+                return 'Cancelled by user.';
+            }
+        } elseif ($refusal = $this->commandGuard->check($command, $allowlist)) {
             return $refusal;
         }
 
@@ -49,6 +58,6 @@ class RunArtisan extends AbstractTool
             return "Artisan command failed (exit {$result->exitCode()}):\n{$result->errorOutput()}";
         }
 
-        return $result->output() ?: "(Command ran successfully with no output.)";
+        return $result->output() ?: '(Command ran successfully with no output.)';
     }
 }

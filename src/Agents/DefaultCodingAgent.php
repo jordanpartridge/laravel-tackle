@@ -11,6 +11,7 @@ use Tackle\Attributes\AiModel;
 use Tackle\Attributes\AiProvider;
 use Tackle\Attributes\Workspace;
 use Tackle\Contracts\CodingAgent;
+use Tackle\Support\CommandGuard;
 use Tackle\Support\PathGuard;
 use Tackle\Tools\AskUser;
 use Tackle\Tools\ConfirmAction;
@@ -82,6 +83,13 @@ class DefaultCodingAgent implements CodingAgent
     {
         $workspace = $this->pathGuard->workspace();
 
+        $guard       = app(CommandGuard::class);
+        $allowlist   = $guard->resolveList(config('ai-code.artisan_allowlist', []));
+        $destructive = $guard->resolveList(config('ai-code.artisan_destructive', []));
+
+        $allowlistStr   = $allowlist   ? implode(', ', $allowlist)   : '(none)';
+        $destructiveStr = $destructive ? implode(', ', $destructive) : '(none)';
+
         return <<<INSTRUCTIONS
         You are an expert Laravel coding assistant running inside the project at: {$workspace}
 
@@ -101,7 +109,7 @@ class DefaultCodingAgent implements CodingAgent
         - Use ReadFile only after narrowing down to the specific file you need.
         - Use EditFile with unique surrounding context. If old_str is not unique, widen it until it is.
         - Use WriteFile only for genuinely new files; never for files that already exist.
-        - Use RunArtisan for framework operations (make:model, migrate, etc.). The allowlist permits: make:*, migrate, migrate:*, db:seed, route:list, test. Do NOT attempt RunArtisan with commands outside this list (e.g. db:wipe, db:drop) — they will be refused. For destructive operations not in the allowlist, tell the user to run the command themselves in their terminal.
+        - Use RunArtisan for framework operations (make:model, migrate, etc.). Allowed for this environment: {$allowlistStr}. Destructive (terminal confirmation required): {$destructiveStr}. Do NOT attempt RunArtisan with commands outside both lists — they will be refused. For blocked operations, tell the user to run the command themselves in their terminal.
         - Use RunTests after any code change.
         - Use RunShell only when no other tool suffices.
 
