@@ -73,6 +73,8 @@ class InstallCommand extends Command
         $defaults = [
             'AI_CODE_HEALING_ENABLED' => 'false',
             'GITHUB_TOKEN'            => '',
+            'SENTRY_AUTH_TOKEN'       => '',
+            'SENTRY_ORG'              => '',
         ];
 
         foreach ($defaults as $key => $value) {

@@ -31,6 +31,7 @@ class HealthCommand extends Command
             $this->checkHealing();
         }
 
+        $this->checkSentry();
         $this->checkWorktrees();
 
         $this->printSummary();
@@ -131,6 +132,21 @@ class HealthCommand extends Command
                     'Set GITHUB_TOKEN in .env, or authenticate with: gh auth login'
                 );
             }
+        }
+    }
+
+    private function checkSentry(): void
+    {
+        $token = config('ai-code.sentry.auth_token');
+        $org   = config('ai-code.sentry.org');
+
+        if ($token && $org) {
+            $this->pass('Sentry configured — ReadSentryIssue tool is active');
+        } else {
+            $this->notice(
+                'Sentry not configured — ReadSentryIssue tool will no-op',
+                'Set SENTRY_AUTH_TOKEN and SENTRY_ORG in .env to enable it'
+            );
         }
     }
 

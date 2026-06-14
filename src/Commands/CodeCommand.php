@@ -10,7 +10,6 @@ use Laravel\Ai\Streaming\Events\ToolCall;
 use Laravel\Ai\Streaming\Events\ToolResult;
 use Laravel\Prompts\Stream;
 use Tackle\Contracts\CodingAgent;
-use Tackle\Exceptions\AgentInterruptedException;
 use Tackle\Support\BudgetTracker;
 
 use function Laravel\Prompts\error as promptError;
@@ -36,8 +35,6 @@ class CodeCommand extends Command
 
     private ?Stream $activeStream = null;
     private array   $history      = [];
-    private bool    $interrupted  = false;
-    private bool    $agentRunning = false;
     private ?array  $fileIndex    = null;
 
     public function handle(CodingAgent $agent, BudgetTracker $budget): int
@@ -72,8 +69,6 @@ class CodeCommand extends Command
         $budgetUsd = config('ai-code.budget_usd', 1.00);
         $shellMode = config('ai-code.shell', 'approve');
 
-        $this->registerInterruptHandler();
-
         title('Tackle — Ready');
         intro("Laravel Tackle  ·  {$model}  ·  \${$budgetUsd} budget  ·  shell: {$shellMode}");
 
@@ -83,7 +78,7 @@ class CodeCommand extends Command
                 options: fn (string $value) => $this->completions($value),
                 placeholder: 'Describe a task or type "exit" to quit. Use @ to reference files.',
                 required: true,
-                hint: count($this->history) > 0 ? 'Use ↑↓ for history · @ for files · Tab to complete · Ctrl+C interrupts a run' : '@ for files · Tab to complete · Ctrl+C interrupts a run',
+                hint: count($this->history) > 0 ? 'Use ↑↓ for history · @ for files · Tab to complete' : '@ for files · Tab to complete',
                 scroll: 10,
             ))->prompt();
 
@@ -116,16 +111,6 @@ class CodeCommand extends Command
                 note('The session is still active — continue with a new task.');
             }
 
-            if ($this->interrupted) {
-                $this->interrupted = false;
-                $this->line('');
-                warning('Interrupted — the agent has stopped. Your session is still active.');
-                title('Tackle — Ready');
-                $this->line('');
-                $this->line('<fg=gray>─────────────────────────────────────────────────────────</>');
-                continue;
-            }
-
             $this->showGitDiff();
 
             title('Tackle — Ready');
@@ -134,42 +119,12 @@ class CodeCommand extends Command
         }
     }
 
-    private function registerInterruptHandler(): void
-    {
-        if (! function_exists('pcntl_async_signals') || ! function_exists('pcntl_signal')) {
-            return;
-        }
-
-        pcntl_async_signals(true);
-
-        pcntl_signal(SIGINT, function () {
-            if ($this->agentRunning) {
-                // Mid-run: interrupt the turn, keep the session alive.
-                $this->interrupted = true;
-            } else {
-                // At the idle prompt: exit cleanly.
-                title('');
-                $this->line('');
-                outro('Goodbye!');
-                exit(0);
-            }
-        });
-    }
-
     private function runAgentTurn(CodingAgent $agent, BudgetTracker $budget, string $task): void
     {
-        $this->agentRunning = true;
-        $this->interrupted  = false;
-
         try {
             $response = $agent->stream($task);
 
             $response->each(function ($event) use ($budget) {
-                if ($this->interrupted) {
-                    $this->closeStream();
-                    throw new AgentInterruptedException();
-                }
-
                 if ($event instanceof TextDelta) {
                     if ($this->activeStream === null) {
                         $this->line('');
@@ -210,10 +165,7 @@ class CodeCommand extends Command
                     }
                 }
             });
-        } catch (AgentInterruptedException) {
-            // Swallow — the main loop checks $this->interrupted and shows the message.
         } finally {
-            $this->agentRunning = false;
             $this->closeStream();
         }
     }
@@ -251,6 +203,7 @@ class CodeCommand extends Command
             'GitDiff'            => '🔀 git diff' . (! empty($args['path']) ? ' ' . $args['path'] : ''),
             'ListRoutes'         => '🗺️  listing routes',
             'ReadTelescopeEntry' => '🔭 reading telescope',
+            'ReadSentryIssue'   => '🪲 reading sentry',
             default              => '→ ' . $tool,
         };
 

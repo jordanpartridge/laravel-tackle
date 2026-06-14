@@ -156,6 +156,29 @@ return [
     |   GITHUB_TOKEN env var → GitHub CLI (~/.config/gh/hosts.yml) → null.
     |
     */
+    /*
+    |--------------------------------------------------------------------------
+    | Sentry Integration
+    |--------------------------------------------------------------------------
+    |
+    | When set, the ReadSentryIssue tool can fetch issue details (exception,
+    | stacktrace, breadcrumbs, request context) directly from the Sentry API.
+    |
+    | auth_token  - A Sentry auth token with issue:read scope.
+    |               Generate one at https://sentry.io/settings/account/api/auth-tokens/
+    | org         - Your Sentry organisation slug (visible in the Sentry URL).
+    | project     - Your Sentry project slug (optional — used for listing issues).
+    |
+    | These match the standard Sentry CLI env vars (SENTRY_AUTH_TOKEN, SENTRY_ORG,
+    | SENTRY_PROJECT) so no extra setup is needed if you already use the Sentry CLI.
+    |
+    */
+    'sentry' => [
+        'auth_token' => env('SENTRY_AUTH_TOKEN'),
+        'org'        => env('SENTRY_ORG'),
+        'project'    => env('SENTRY_PROJECT'),
+    ],
+
     'healing' => [
         'enabled'       => env('AI_CODE_HEALING_ENABLED', false),
         'mode'          => env('AI_CODE_HEALING_MODE', 'pr'),
