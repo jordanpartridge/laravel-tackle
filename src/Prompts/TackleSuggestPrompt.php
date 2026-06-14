@@ -75,7 +75,7 @@ class TackleSuggestPrompt extends SuggestPrompt
             return;
         }
 
-        $this->typedValue     = $this->matches()[$this->highlighted];
+        $this->typedValue     = $this->matches()[$this->highlighted] . ' ';
         $this->cursorPosition = mb_strlen($this->typedValue);
         $this->highlighted    = null;
         $this->matches        = null;
