@@ -38,6 +38,7 @@ class CodeCommand extends Command
     private array   $history      = [];
     private bool    $interrupted  = false;
     private bool    $agentRunning = false;
+    private ?array  $fileIndex    = null;
 
     public function handle(CodingAgent $agent, BudgetTracker $budget): int
     {
@@ -293,39 +294,103 @@ class CodeCommand extends Command
     {
         $atPos = strrpos($input, '@');
 
-        // No @ in input — return session history.
         if ($atPos === false) {
             return array_reverse($this->history);
         }
 
         $afterAt = substr($input, $atPos + 1);
 
-        // Space after the @-mention means it's already complete — fall back to history.
+        // Space after a completed @-mention — back to history.
         if (str_contains($afterAt, ' ')) {
             return array_reverse($this->history);
         }
 
-        $before  = substr($input, 0, $atPos + 1); // everything up to and including @
-        $base    = base_path();
-        $pattern = $base . '/' . $afterAt . '*';
-        $matches = glob($pattern) ?: [];
+        $before = substr($input, 0, $atPos + 1);
 
+        // Query contains a slash — path-prefix glob so the user can drill down.
+        if (str_contains($afterAt, '/') || $afterAt === '') {
+            return $this->pathCompletions($before, $afterAt);
+        }
+
+        // No slash — fuzzy filename search across the whole project.
+        return $this->filenameCompletions($before, $afterAt);
+    }
+
+    private function pathCompletions(string $before, string $query): array
+    {
+        $base     = base_path();
         $excluded = ['vendor', '.git', 'node_modules', 'storage', 'bootstrap/cache'];
+        $matches  = glob($base . '/' . $query . '*') ?: [];
+        $results  = [];
 
-        $results = [];
         foreach ($matches as $match) {
             $relative = ltrim(str_replace($base, '', $match), '/');
-            $topLevel = explode('/', $relative)[0];
 
-            if (in_array($topLevel, $excluded, strict: true)) {
+            if (in_array(explode('/', $relative)[0], $excluded, strict: true)) {
                 continue;
             }
 
-            // Append / for directories so the user can keep drilling down.
             $results[] = $before . $relative . (is_dir($match) ? '/' : '');
         }
 
         return array_slice($results, 0, 20);
+    }
+
+    private function filenameCompletions(string $before, string $query): array
+    {
+        $index   = $this->fileIndex();
+        $results = [];
+
+        foreach ($index as $relative) {
+            if (stripos(basename($relative), $query) !== false) {
+                $results[] = $before . $relative;
+            }
+        }
+
+        // Exact basename-prefix matches first, then contains matches.
+        usort($results, function (string $a, string $b) use ($before, $query): int {
+            $aStart = stripos(basename(substr($a, strlen($before))), $query) === 0;
+            $bStart = stripos(basename(substr($b, strlen($before))), $query) === 0;
+
+            return match (true) {
+                $aStart && ! $bStart => -1,
+                ! $aStart && $bStart => 1,
+                default              => strcmp($a, $b),
+            };
+        });
+
+        return array_slice($results, 0, 20);
+    }
+
+    private function fileIndex(): array
+    {
+        if ($this->fileIndex !== null) {
+            return $this->fileIndex;
+        }
+
+        $excluded = ['vendor', '.git', 'node_modules', 'storage', 'bootstrap'];
+        $base     = base_path();
+        $index    = [];
+
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($base, \RecursiveDirectoryIterator::SKIP_DOTS),
+        );
+
+        foreach ($iterator as $file) {
+            if ($file->isDir()) {
+                continue;
+            }
+
+            $relative = ltrim(str_replace($base, '', $file->getPathname()), '/');
+
+            if (in_array(explode('/', $relative)[0], $excluded, strict: true)) {
+                continue;
+            }
+
+            $index[] = $relative;
+        }
+
+        return $this->fileIndex = $index;
     }
 
     private function expandAtMentions(string $task): string
