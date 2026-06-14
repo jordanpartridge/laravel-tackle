@@ -21,6 +21,9 @@ class WorktreeManager
             throw new RuntimeException('Failed to create worktree: ' . trim($result->errorOutput()));
         }
 
+        // Resolve symlinks so PathGuard comparisons work on macOS (/var → /private/var).
+        $this->path = realpath($this->path) ?: $this->path;
+
         return $this->path;
     }
 
