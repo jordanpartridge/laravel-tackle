@@ -18,7 +18,7 @@ use function Laravel\Prompts\intro;
 use function Laravel\Prompts\note;
 use function Laravel\Prompts\outro;
 use function Laravel\Prompts\stream;
-use function Laravel\Prompts\suggest;
+use Tackle\Prompts\TackleSuggestPrompt;
 use function Laravel\Prompts\title;
 use function Laravel\Prompts\warning;
 
@@ -78,14 +78,14 @@ class CodeCommand extends Command
         intro("Laravel Tackle  ·  {$model}  ·  \${$budgetUsd} budget  ·  shell: {$shellMode}");
 
         while (true) {
-            $task = suggest(
+            $task = (new TackleSuggestPrompt(
                 label: 'What should I work on?',
                 options: fn (string $value) => $this->completions($value),
                 placeholder: 'Describe a task or type "exit" to quit. Use @ to reference files.',
                 required: true,
-                hint: count($this->history) > 0 ? 'Use ↑↓ for history · @ to reference a file · Ctrl+C interrupts a run' : '@ to reference a file · Ctrl+C interrupts a run',
+                hint: count($this->history) > 0 ? 'Use ↑↓ for history · @ for files · Tab to complete · Ctrl+C interrupts a run' : '@ for files · Tab to complete · Ctrl+C interrupts a run',
                 scroll: 10,
-            );
+            ))->prompt();
 
             if (in_array(strtolower(trim($task)), ['exit', 'quit', 'q'], strict: true)) {
                 title('');
