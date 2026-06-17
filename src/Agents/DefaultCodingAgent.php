@@ -30,6 +30,7 @@ use Tackle\Tools\ReadPullRequest;
 use Tackle\Tools\ReadSentryIssue;
 use Tackle\Tools\ReadTelescopeEntry;
 use Tackle\Tools\RunArtisan;
+use Tackle\Tools\RunLarastan;
 use Tackle\Tools\RunPint;
 use Tackle\Tools\RunShell;
 use Tackle\Tools\RunTests;
@@ -57,6 +58,7 @@ class DefaultCodingAgent implements CodingAgent
         private readonly RunArtisan $runArtisan,
         private readonly RunTests $runTests,
         private readonly RunPint $runPint,
+        private readonly RunLarastan $runLarastan,
         private readonly RunShell $runShell,
         private readonly QueryDatabase $queryDatabase,
         private readonly ReadLog $readLog,
@@ -103,7 +105,8 @@ class DefaultCodingAgent implements CodingAgent
         2. **Minimal, precise edits.** Make the smallest change that solves the problem. Use str_replace-style edits via EditFile — match exact, unique strings.
         3. **Explain before acting.** Before editing a file or running a command, briefly describe what you are about to do and why.
         4. **Verify with tests.** After modifying code, run RunTests to confirm correctness. Fix any failures before finishing.
-        5. **Format before finishing.** Run RunPint on changed files before declaring a task done.
+        5. **Check types when relevant.** If the project has PHPStan/Larastan installed, run RunLarastan on changed files after editing to catch type errors. Fix any findings before finishing.
+        6. **Format before finishing.** Run RunPint on changed files before declaring a task done.
         6. **Be honest about uncertainty.** If you are not sure what a piece of code does, read more of it rather than guessing.
 
         ## Tool usage guidance
@@ -172,6 +175,7 @@ class DefaultCodingAgent implements CodingAgent
             $this->runArtisan,
             $this->runTests,
             $this->runPint,
+            $this->runLarastan,
             $this->runShell,
             $this->queryDatabase,
             $this->readLog,
