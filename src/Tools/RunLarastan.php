@@ -23,6 +23,8 @@ class RunLarastan extends AbstractTool
                 ->description('Optional file or directory to analyse. Defaults to the paths defined in phpstan.neon / phpstan.neon.dist.'),
             'level' => $schema->integer()
                 ->description('Optional analysis level (0–9). Overrides the level in the config file. Omit to use the project default.'),
+            'memory_limit' => $schema->string()
+                ->description('Optional PHP memory limit (e.g. "1G", "512M"). Use when analysis fails with a memory exhaustion error.'),
         ];
     }
 
@@ -36,7 +38,12 @@ class RunLarastan extends AbstractTool
                 . "'composer require --dev nunomaduro/larastan' to enable static analysis.";
         }
 
-        $args = ['./vendor/bin/phpstan', 'analyse', '--no-progress', '--no-interaction'];
+        $memoryLimit = $request->string('memory_limit', '');
+        $phpBin      = $memoryLimit !== ''
+            ? 'php -d memory_limit=' . escapeshellarg($memoryLimit)
+            : 'php';
+
+        $args = [$phpBin, './vendor/bin/phpstan', 'analyse', '--no-progress', '--no-interaction'];
 
         $level = $request->integer('level', -1);
         if ($level >= 0) {
