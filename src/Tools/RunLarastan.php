@@ -50,13 +50,13 @@ class RunLarastan extends AbstractTool
             $args[] = '--level=' . $level;
         }
 
-        $path = $request->string('path', '');
+        $path = trim((string) $request->string('path', ''));
         if ($path !== '') {
             $args[] = escapeshellarg($path);
         }
 
         $result = Process::path($workspace)
-            ->timeout(120)
+            ->timeout(300)
             ->run(implode(' ', $args));
 
         $output = trim($result->output() . $result->errorOutput());
@@ -66,10 +66,11 @@ class RunLarastan extends AbstractTool
         }
 
         // Auto-retry with a higher memory limit when the process runs out of memory.
-        if ($memoryLimit === '' && str_contains($output, 'memory_limit')) {
+        // PHPStan outputs "Allowed memory size of N bytes exhausted" on OOM.
+        if ($memoryLimit === '' && stripos($output, 'memory') !== false && stripos($output, 'exhausted') !== false) {
             $args[0] = 'php -d memory_limit=1G';
             $result  = Process::path($workspace)
-                ->timeout(120)
+                ->timeout(300)
                 ->run(implode(' ', $args));
             $output = trim($result->output() . $result->errorOutput());
         }
