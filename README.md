@@ -12,6 +12,7 @@ The harness ships with three built-in agents and a full tool infrastructure you
 can extend or build on top of:
 
 - **`ai:code`** — an interactive coding agent that reads your codebase, edits files, runs tests, and formats code
+- **`ai:fix`** — a focused fix session: paste an exception, point it at a Sentry issue (`--sentry=ID`) or GitHub issue (`--issue=N`), and the agent diagnoses, patches, and verifies the fix. Runs in worktree mode by default.
 - **`ai:review`** — a read-only agent that reviews git diffs and surfaces real issues with severity levels
 - **`ai:explain`** — explains what a file, class, or method does in plain English
 - **`ai:test`** — generates a Pest test file for any class or method
@@ -40,6 +41,7 @@ Built on top of [`laravel/ai`](https://github.com/laravel/ai).
   - [Scheduled command healing](#scheduled-command-healing)
   - [Per-class opt-out](#per-class-opt-out)
   - [Audit log](#audit-log)
+- [Fix an issue](#fix-an-issue)
 - [Code review](#code-review)
 - [Explain code](#explain-code)
 - [Generate tests](#generate-tests)
@@ -753,6 +755,38 @@ degrades gracefully.
 - The healer never modifies `.env`, `vendor/`, `storage/`, or `.git/` — the
   same path guards apply as in interactive mode.
 - Healer jobs have `$tries = 1`. A failing healer does not create a healing loop.
+
+---
+
+## Fix an issue
+
+`php artisan ai:fix` opens a focused fix session. It loads context from a Sentry issue, a GitHub issue, or a pasted exception — then fires the agent immediately, without you having to describe the task. Worktree mode is on by default so live files are never touched until you open a PR.
+
+```bash
+# Paste or describe the exception at the prompt
+php artisan ai:fix
+
+# Load context from a Sentry issue
+php artisan ai:fix --sentry=4821
+
+# Load context from a GitHub issue
+php artisan ai:fix --issue=42
+```
+
+After the agent applies the fix, the session stays open for follow-up:
+
+```
+> add a regression test for this
+> open a pull request
+> exit
+```
+
+All shell and worktree flags from `ai:code` are supported:
+
+```bash
+php artisan ai:fix --sentry=4821 --no-worktree   # edit live files directly
+php artisan ai:fix --issue=42 --yolo              # skip shell approval prompts
+```
 
 ---
 

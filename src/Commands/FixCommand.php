@@ -10,6 +10,8 @@ use Laravel\Ai\Streaming\Events\ToolCall;
 use Laravel\Ai\Streaming\Events\ToolResult;
 use Laravel\Prompts\Stream;
 use Tackle\Contracts\CodingAgent;
+use Tackle\Healing\GitHubReader;
+use Tackle\Healing\SentryReader;
 use Tackle\Support\BudgetTracker;
 use Tackle\Support\WorktreeManager;
 
@@ -18,37 +20,38 @@ use function Laravel\Prompts\intro;
 use function Laravel\Prompts\note;
 use function Laravel\Prompts\outro;
 use function Laravel\Prompts\stream;
-use Tackle\Prompts\TackleSuggestPrompt;
+use function Laravel\Prompts\text;
 use function Laravel\Prompts\title;
 use function Laravel\Prompts\warning;
+use Tackle\Prompts\TackleSuggestPrompt;
 
-class CodeCommand extends Command
+class FixCommand extends Command
 {
-    protected $signature = 'ai:code
-        {--session= : Resume a named session}
-        {--shell= : Override the shell mode for this session (off|allowlist|approve|yolo)}
-        {--off : Shorthand for --shell=off}
-        {--allowlist : Shorthand for --shell=allowlist}
-        {--approve : Shorthand for --shell=approve}
-        {--yolo : Shorthand for --shell=yolo}
-        {--worktree : Force worktree isolation for this session}
-        {--no-worktree : Disable worktree isolation for this session}';
+    protected $signature = 'ai:fix
+        {--sentry=      : Sentry issue ID to fetch and fix}
+        {--issue=       : GitHub issue number to fetch and fix}
+        {--shell=       : Override the shell mode for this session (off|allowlist|approve|yolo)}
+        {--off          : Shorthand for --shell=off}
+        {--allowlist    : Shorthand for --shell=allowlist}
+        {--approve      : Shorthand for --shell=approve}
+        {--yolo         : Shorthand for --shell=yolo}
+        {--worktree     : Force worktree isolation for this session}
+        {--no-worktree  : Disable worktree isolation for this session}';
 
-    protected $description = 'Start an interactive AI coding session powered by Laravel Tackle.';
+    protected $description = 'Fix an exception or issue — loads context from Sentry, a GitHub issue, or a pasted exception, then opens an interactive fix session.';
 
     private ?Stream $activeStream = null;
     private array   $history      = [];
-    private ?array  $fileIndex    = null;
 
     public function handle(CodingAgent $agent, BudgetTracker $budget, WorktreeManager $worktrees): int
     {
         if (! App::runningInConsole()) {
-            $this->error('ai:code must be run from the terminal.');
+            $this->error('ai:fix must be run from the terminal.');
             return self::FAILURE;
         }
 
         if (! $this->isTty()) {
-            $this->error('ai:code requires an interactive TTY — cannot run in a non-interactive pipe.');
+            $this->error('ai:fix requires an interactive TTY.');
             return self::FAILURE;
         }
 
@@ -95,20 +98,51 @@ class CodeCommand extends Command
         $shellMode = $this->resolveShellMode();
         $wtLabel   = $worktree ? ' · worktree: on' : '';
 
-        title('Tackle — Ready');
-        intro("Laravel Tackle  ·  {$model}  ·  \${$budgetUsd} budget  ·  shell: {$shellMode}{$wtLabel}");
+        title('Tackle Fix — Ready');
+        intro("Laravel Tackle Fix  ·  {$model}  ·  \${$budgetUsd} budget  ·  shell: {$shellMode}{$wtLabel}");
 
         if ($worktree) {
             note('Worktree mode — all edits go to an isolated copy of the repo. Live files are untouched until you open a PR.');
         }
 
+        // Load context from the provided source, or prompt for it.
+        [$firstPrompt, $sourceLabel] = $this->buildFirstPrompt();
+
+        if ($firstPrompt === null) {
+            return self::FAILURE;
+        }
+
+        if ($sourceLabel) {
+            $this->line("<fg=cyan>  Context loaded from {$sourceLabel}</>");
+            $this->line('');
+        }
+
+        title('Tackle Fix — Thinking…');
+        $this->line('');
+
+        try {
+            $this->runAgentTurn($agent, $budget, $firstPrompt);
+        } catch (\Throwable $e) {
+            $this->closeStream();
+            promptError('Agent error: ' . $e->getMessage());
+            note('The session is still active — continue with a new task.');
+        }
+
+        $this->showGitDiff();
+        $this->history[] = $firstPrompt;
+
+        // Drop into the interactive follow-up loop.
         while (true) {
+            title('Tackle Fix — Ready');
+            $this->line('');
+            $this->line('<fg=gray>─────────────────────────────────────────────────────────</>');
+
             $task = (new TackleSuggestPrompt(
-                label: 'What should I work on?',
-                options: fn (string $value) => $this->completions($value),
-                placeholder: 'Describe a task or type "exit" to quit. Use @ to reference files.',
+                label: 'Follow up or type "exit" to quit',
+                options: fn (string $value) => array_reverse($this->history),
+                placeholder: 'e.g. "add a test", "open a PR", or type "exit"',
                 required: true,
-                hint: count($this->history) > 0 ? 'Use ↑↓ for history · @ for files · Tab to complete' : '@ for files · Tab to complete',
+                hint: count($this->history) > 0 ? 'Use ↑↓ for history' : '',
                 scroll: 10,
             ))->prompt();
 
@@ -121,7 +155,7 @@ class CodeCommand extends Command
             $this->history[] = $task;
 
             if ($budget->overBudget()) {
-                title('Tackle — Budget Exceeded');
+                title('Tackle Fix — Budget Exceeded');
                 promptError(sprintf(
                     'Session aborted: estimated cost ($%.4f) exceeds the budget limit ($%.2f).',
                     $budget->estimatedCost(),
@@ -130,11 +164,11 @@ class CodeCommand extends Command
                 return self::FAILURE;
             }
 
-            title('Tackle — Thinking…');
+            title('Tackle Fix — Thinking…');
             $this->line('');
 
             try {
-                $this->runAgentTurn($agent, $budget, $this->expandAtMentions($task));
+                $this->runAgentTurn($agent, $budget, $task);
             } catch (\Throwable $e) {
                 $this->closeStream();
                 promptError('Agent error: ' . $e->getMessage());
@@ -142,31 +176,67 @@ class CodeCommand extends Command
             }
 
             $this->showGitDiff();
-
-            title('Tackle — Ready');
-            $this->line('');
-            $this->line('<fg=gray>─────────────────────────────────────────────────────────</>');
         }
     }
 
-    private function resolveWorktreeMode(): bool
+    /**
+     * Build the initial agent prompt and a short label describing the source.
+     * Returns [prompt, sourceLabel] or [null, null] on failure.
+     *
+     * @return array{string|null, string|null}
+     */
+    private function buildFirstPrompt(): array
     {
-        if ($this->option('worktree')) {
-            return true;
+        if ($sentryId = $this->option('sentry')) {
+            $context = app(SentryReader::class)->forIssue((string) $sentryId);
+
+            if ($context === '') {
+                $this->error("Could not fetch Sentry issue #{$sentryId}. Check SENTRY_AUTH_TOKEN and SENTRY_ORG.");
+                return [null, null];
+            }
+
+            return [
+                $this->wrapContext("Sentry issue #{$sentryId}", $context),
+                "Sentry issue #{$sentryId}",
+            ];
         }
 
-        if ($this->option('no-worktree')) {
-            return false;
+        if ($issueNumber = $this->option('issue')) {
+            $context = app(GitHubReader::class)->forIssue((int) $issueNumber);
+
+            if ($context === '') {
+                $this->error("Could not fetch GitHub issue #{$issueNumber}. Check GITHUB_TOKEN and GITHUB_REPO.");
+                return [null, null];
+            }
+
+            return [
+                $this->wrapContext("GitHub issue #{$issueNumber}", $context),
+                "GitHub issue #{$issueNumber}",
+            ];
         }
 
-        $config = config('tackle.worktree', false);
+        // No source flag — prompt the user to describe or paste the exception.
+        $description = text(
+            label: 'Paste the exception or describe what to fix',
+            placeholder: 'e.g. "TypeError in BillingService line 42: ..." or "fix the login 500 error"',
+            required: true,
+            hint: 'You can paste a stack trace, a Sentry/Telescope excerpt, or a plain description.',
+        );
 
-        if (is_array($config)) {
-            $env = app()->environment();
-            return (bool) ($config[$env] ?? $config['*'] ?? false);
-        }
+        return [
+            "Fix the following issue in this Laravel application:\n\n{$description}\n\n"
+            . "Diagnose the root cause by reading the relevant code, apply the minimal fix, run tests to verify, "
+            . "then offer to open a pull request.",
+            null,
+        ];
+    }
 
-        return (bool) $config;
+    private function wrapContext(string $label, string $context): string
+    {
+        return "Fix the following issue in this Laravel application:\n\n"
+            . "--- {$label} ---\n{$context}\n---\n\n"
+            . "Diagnose the root cause by reading the relevant code, apply the minimal fix, run tests to verify, "
+            . "then offer to open a pull request.";
     }
 
     private function runAgentTurn(CodingAgent $agent, BudgetTracker $budget, string $task): void
@@ -233,7 +303,6 @@ class CodeCommand extends Command
         $tool = $event->toolCall->name;
         $args = $event->toolCall->arguments;
 
-        // These tools render their own interactive UI — suppress the label.
         if (in_array($tool, ['AskUser', 'ConfirmAction'], strict: true)) {
             return;
         }
@@ -263,7 +332,7 @@ class CodeCommand extends Command
             default              => '→ ' . $tool,
         };
 
-        title('Tackle — ' . strip_tags($summary));
+        title('Tackle Fix — ' . strip_tags($summary));
         $this->line("<fg=cyan>  {$summary}</>");
     }
 
@@ -339,134 +408,18 @@ class CodeCommand extends Command
         }
     }
 
-    private function completions(string $input): array
+    private function resolveWorktreeMode(): bool
     {
-        $atPos = strrpos($input, '@');
-
-        if ($atPos === false) {
-            return array_reverse($this->history);
+        if ($this->option('worktree')) {
+            return true;
         }
 
-        $afterAt = substr($input, $atPos + 1);
-
-        // Space after a completed @-mention — back to history.
-        if (str_contains($afterAt, ' ')) {
-            return array_reverse($this->history);
+        if ($this->option('no-worktree')) {
+            return false;
         }
 
-        $before = substr($input, 0, $atPos + 1);
-
-        // Query contains a slash — path-prefix glob so the user can drill down.
-        if (str_contains($afterAt, '/') || $afterAt === '') {
-            return $this->pathCompletions($before, $afterAt);
-        }
-
-        // No slash — fuzzy filename search across the whole project.
-        return $this->filenameCompletions($before, $afterAt);
-    }
-
-    private function pathCompletions(string $before, string $query): array
-    {
-        $base     = base_path();
-        $excluded = ['vendor', '.git', 'node_modules', 'storage', 'bootstrap/cache'];
-        $matches  = glob($base . '/' . $query . '*') ?: [];
-        $results  = [];
-
-        foreach ($matches as $match) {
-            $relative = ltrim(str_replace($base, '', $match), '/');
-
-            if (in_array(explode('/', $relative)[0], $excluded, strict: true)) {
-                continue;
-            }
-
-            $results[] = $before . $relative . (is_dir($match) ? '/' : '');
-        }
-
-        return array_slice($results, 0, 20);
-    }
-
-    private function filenameCompletions(string $before, string $query): array
-    {
-        $index   = $this->fileIndex();
-        $results = [];
-
-        foreach ($index as $relative) {
-            if (stripos(basename($relative), $query) !== false) {
-                $results[] = $before . $relative;
-            }
-        }
-
-        // Exact basename-prefix matches first, then contains matches.
-        usort($results, function (string $a, string $b) use ($before, $query): int {
-            $aStart = stripos(basename(substr($a, strlen($before))), $query) === 0;
-            $bStart = stripos(basename(substr($b, strlen($before))), $query) === 0;
-
-            return match (true) {
-                $aStart && ! $bStart => -1,
-                ! $aStart && $bStart => 1,
-                default              => strcmp($a, $b),
-            };
-        });
-
-        return array_slice($results, 0, 20);
-    }
-
-    private function fileIndex(): array
-    {
-        if ($this->fileIndex !== null) {
-            return $this->fileIndex;
-        }
-
-        $excluded = ['vendor', '.git', 'node_modules', 'storage', 'bootstrap'];
-        $base     = base_path();
-        $index    = [];
-
-        $iterator = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($base, \RecursiveDirectoryIterator::SKIP_DOTS),
-        );
-
-        foreach ($iterator as $file) {
-            if ($file->isDir()) {
-                continue;
-            }
-
-            $relative = ltrim(str_replace($base, '', $file->getPathname()), '/');
-
-            if (in_array(explode('/', $relative)[0], $excluded, strict: true)) {
-                continue;
-            }
-
-            $index[] = $relative;
-        }
-
-        return $this->fileIndex = $index;
-    }
-
-    private function expandAtMentions(string $task): string
-    {
-        $wt   = app(WorktreeManager::class);
-        $root = $wt->active() ? $wt->path() : base_path();
-
-        return preg_replace_callback('#@([\w./_-]+)#', function ($matches) use ($root) {
-            $path = $root . DIRECTORY_SEPARATOR . $matches[1];
-
-            if (! file_exists($path) || is_dir($path)) {
-                return $matches[0];
-            }
-
-            $content = @file_get_contents($path);
-
-            if ($content === false) {
-                return $matches[0];
-            }
-
-            return sprintf(
-                "%s\n```\n// %s\n%s\n```",
-                $matches[0],
-                $matches[1],
-                rtrim($content),
-            );
-        }, $task);
+        // ai:fix defaults worktree on — fixes should not touch live files without review.
+        return true;
     }
 
     private function resolveShellMode(): string
