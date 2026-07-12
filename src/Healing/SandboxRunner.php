@@ -103,9 +103,15 @@ class SandboxRunner
     {
         Process::path($worktreePath)->run(['git', 'add', '-A']);
 
+        // --no-verify: worktrees share the parent repo's .git/hooks but not
+        // its vendor/, so a pre-commit hook that runs vendor/bin/pint (or any
+        // dev dependency) fails inside the sandbox — a completed coding run
+        // died exactly there. The pipeline runs its own format/test gate; the
+        // host repo's hook is a duplicate check in an environment that cannot
+        // support it.
         $result = Process::path($worktreePath)
             ->timeout(30)
-            ->run(['git', 'commit', '-m', $message]);
+            ->run(['git', 'commit', '--no-verify', '-m', $message]);
 
         if (!$result->successful()) {
             throw new RuntimeException(
