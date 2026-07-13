@@ -13,7 +13,7 @@ class SandboxRunner
 
     public function __construct()
     {
-        $this->repoRoot = base_path();
+        $this->repoRoot = config('tackle.workspace') ?: base_path();
     }
 
     /**
@@ -23,7 +23,21 @@ class SandboxRunner
      */
     public function prepare(string $branchName): string
     {
-        $path = sys_get_temp_dir() . '/tackle-' . md5($branchName . microtime());
+        // A dedicated workspace clone is refreshed before every sandbox, so
+        // branches are cut from current origin/master — and any accident in
+        // the sandbox machinery lands on the clone, never the live checkout.
+        $ref = 'HEAD';
+        if (config('tackle.workspace')) {
+            Process::path($this->repoRoot)->timeout(60)->run(['git', 'fetch', 'origin']);
+            $ref = config('tackle.workspace_ref', 'origin/master');
+        }
+
+        $sandboxDir = rtrim(config('tackle.sandbox_dir') ?: sys_get_temp_dir(), '/');
+        if (!is_dir($sandboxDir)) {
+            mkdir($sandboxDir, 0755, true);
+        }
+
+        $path = $sandboxDir . '/tackle-' . md5($branchName . microtime());
 
         // Ensure there is at least one commit before attempting a worktree.
         $headCheck = Process::path($this->repoRoot)->timeout(10)->run(['git', 'rev-parse', 'HEAD']);
@@ -36,7 +50,7 @@ class SandboxRunner
 
         $result = Process::path($this->repoRoot)
             ->timeout(60)
-            ->run(['git', 'worktree', 'add', '-b', $branchName, $path, 'HEAD']);
+            ->run(['git', 'worktree', 'add', '-b', $branchName, $path, $ref]);
 
         if (!$result->successful()) {
             throw new RuntimeException(
@@ -59,7 +73,12 @@ class SandboxRunner
         if (is_dir($vendorSrc) && !file_exists($vendorDst)) {
             $clone = Process::timeout(120)->run(['cp', '-al', $vendorSrc, $vendorDst]);
             if (!$clone->successful()) {
-                symlink($vendorSrc, $vendorDst);
+                // Hardlinks fail across filesystems (tmpfs sandboxes). A plain
+                // copy is slower but correct; a symlink is never acceptable —
+                // it couples the sandbox to the live checkout and composer
+                // resolves the autoloader through it into the wrong tree.
+                Process::timeout(60)->run(['rm', '-rf', $vendorDst]);
+                Process::timeout(300)->run(['cp', '-a', $vendorSrc, $vendorDst]);
             }
         }
 
@@ -81,15 +100,26 @@ class SandboxRunner
      */
     public function runTests(string $worktreePath): bool
     {
+        return $this->runTestsDetailed($worktreePath)['passed'];
+    }
+
+    /**
+     * @return array{passed: bool, output: string}
+     */
+    public function runTestsDetailed(string $worktreePath): array
+    {
         $binary = file_exists($worktreePath . '/vendor/bin/pest')
             ? './vendor/bin/pest'
             : 'php artisan test';
 
         $result = Process::path($worktreePath)
-            ->timeout(120)
+            ->timeout(300)
             ->run($binary);
 
-        return $result->successful();
+        return [
+            'passed' => $result->successful(),
+            'output' => $result->output() . $result->errorOutput(),
+        ];
     }
 
     /**
