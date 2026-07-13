@@ -98,6 +98,21 @@ class SandboxRunner
     /**
      * Run the test suite inside the worktree. Returns true if all tests pass.
      */
+    /**
+     * Format the worktree with pint when it is available. Deterministic —
+     * runs as a pipeline step because sandbox commits use --no-verify (host
+     * git hooks cannot run against a sandbox vendor). Failure is not fatal:
+     * formatting must never cost a run, only a CI style check.
+     */
+    public function runPint(string $worktreePath): void
+    {
+        if (!file_exists($worktreePath . '/vendor/bin/pint')) {
+            return;
+        }
+
+        Process::path($worktreePath)->timeout(120)->run(['./vendor/bin/pint', '--dirty']);
+    }
+
     public function runTests(string $worktreePath): bool
     {
         return $this->runTestsDetailed($worktreePath)['passed'];
