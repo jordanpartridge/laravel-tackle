@@ -44,11 +44,23 @@ class SandboxRunner
             );
         }
 
-        // Symlink vendor so tests run without a full composer install
-        $vendorSrc = $this->repoRoot . '/vendor';
+        // Hardlink-clone vendor so tests run without a full composer install.
+        //
+        // A symlink is wrong twice over: composer's autoloader resolves paths
+        // through the link's REAL location, so tests execute against the host
+        // checkout's code instead of the worktree's — and when the host runs a
+        // --no-dev install, there is no test runner at all, so every PR ships
+        // labelled [tests failing] regardless of the code. cp -al costs a few
+        // seconds, shares file content via hardlinks, and __DIR__ resolves
+        // inside the worktree. tackle.sandbox_vendor points at a dev-grade
+        // vendor when the host's own is production-slim.
+        $vendorSrc = config('tackle.sandbox_vendor') ?: $this->repoRoot . '/vendor';
         $vendorDst = $path . '/vendor';
         if (is_dir($vendorSrc) && !file_exists($vendorDst)) {
-            symlink($vendorSrc, $vendorDst);
+            $clone = Process::timeout(120)->run(['cp', '-al', $vendorSrc, $vendorDst]);
+            if (!$clone->successful()) {
+                symlink($vendorSrc, $vendorDst);
+            }
         }
 
         // Symlink env files so the test suite can connect to the database.
@@ -149,10 +161,13 @@ class SandboxRunner
     public function cleanup(string $worktreePath, string $branchName): void
     {
         try {
-            // Remove vendor symlink before removing the worktree
+            // Remove the vendor clone (or legacy symlink) before the worktree.
+            // Hardlinked files just lose one link; the source vendor is untouched.
             $vendorLink = $worktreePath . '/vendor';
             if (is_link($vendorLink)) {
                 unlink($vendorLink);
+            } elseif (is_dir($vendorLink)) {
+                Process::timeout(60)->run(['rm', '-rf', $vendorLink]);
             }
 
             Process::path($this->repoRoot)
