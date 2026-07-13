@@ -173,13 +173,22 @@ class SandboxRunner
         // died exactly there. The pipeline runs its own format/test gate; the
         // host repo's hook is a duplicate check in an environment that cannot
         // support it.
+        // A no-op is not a failure: a fix attempt that changed nothing must
+        // fall through to the retest, not abort the run. (The canary died
+        // here with a blank error — git reports "nothing to commit" on
+        // stdout, which the exception below used to drop.)
+        $status = Process::path($worktreePath)->timeout(10)->run(['git', 'status', '--porcelain']);
+        if (trim($status->output()) === '') {
+            return;
+        }
+
         $result = Process::path($worktreePath)
             ->timeout(30)
             ->run(['git', ...$identity, 'commit', '--no-verify', '-m', $message]);
 
         if (!$result->successful()) {
             throw new RuntimeException(
-                "git commit failed: " . $result->errorOutput()
+                "git commit failed: " . $result->output() . $result->errorOutput()
             );
         }
     }
