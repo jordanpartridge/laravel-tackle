@@ -99,9 +99,16 @@ class SandboxRunner
     /**
      * Stage all changes in the worktree and commit them.
      */
-    public function commit(string $worktreePath, string $message): void
+    public function commit(string $worktreePath, string $message, ?string $authorName = null, ?string $authorEmail = null): void
     {
         Process::path($worktreePath)->run(['git', 'add', '-A']);
+
+        // When the caller supplies an identity, the commit belongs to it —
+        // an agent's work should not appear authored by whoever's global
+        // gitconfig happens to live on the host.
+        $identity = ($authorName !== null && $authorEmail !== null)
+            ? ['-c', "user.name={$authorName}", '-c', "user.email={$authorEmail}"]
+            : [];
 
         // --no-verify: worktrees share the parent repo's .git/hooks but not
         // its vendor/, so a pre-commit hook that runs vendor/bin/pint (or any
@@ -111,7 +118,7 @@ class SandboxRunner
         // support it.
         $result = Process::path($worktreePath)
             ->timeout(30)
-            ->run(['git', 'commit', '--no-verify', '-m', $message]);
+            ->run(['git', ...$identity, 'commit', '--no-verify', '-m', $message]);
 
         if (!$result->successful()) {
             throw new RuntimeException(
